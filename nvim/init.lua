@@ -49,6 +49,15 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+vim.api.nvim_create_autocmd('LspAttach',{
+  callback = function(ev)
+    local client = vim.lsp.get_client_by_id(ev.data.client_id)
+    if client:supports_method('textDocument/completion') then
+      vim.lsp.completion.enable(true, client.id, ev.buf, {autotrigger = false})
+    end
+  end,
+})
+
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
@@ -66,17 +75,39 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+-- vim.lsp.config['luals'] = {
+--   -- Command and arguments to start the server.
+--   cmd = { 'lua-language-server' },
+--   -- Filetypes to automatically attach to.
+--   filetypes = { 'lua' },
+--   -- Sets the "root directory" to the parent directory of the file in the
+--   -- current buffer that contains either a ".luarc.json" or a
+--   -- ".luarc.jsonc" file. Files that share a root directory will reuse
+--   -- the connection to the same LSP server.
+--   -- Nested lists indicate equal priority, see |vim.lsp.Config|.
+--   root_markers = { { '.luarc.json', '.luarc.jsonc' }, '.git' },
+--   -- Specific settings to send to the server. The schema for this is
+--   -- defined by the server. For example the schema for lua-language-server
+--   -- can be found here https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json
+--   settings = {
+--     Lua = {
+--       runtime = {
+--         version = 'LuaJIT',
+--       }
+--     }
+--   }
+-- }
 -- require('lazydev').find_workspace(buf?)
 -- Setup lazy.nvim plugins
 require("lazy").setup({
   spec = {
     -- add your plugins here
-    {
-      "nvim-treesitter/nvim-treesitter",
-      branch = 'master',
-      lazy = false,
-      build = ":TSUpdate"
-    },
+    -- {
+    --   "nvim-treesitter/nvim-treesitter",
+    --   branch = 'master',
+    --   lazy = false,
+    --   build = ":TSUpdate"
+    -- },
     {
       "ellisonleao/gruvbox.nvim",
       priority = 1000 ,
@@ -84,13 +115,18 @@ require("lazy").setup({
       opts = {}
     },
     {
-      "mason-org/mason.nvim",
-      opts = {
-        ensure_installed = {
-          "luals",
-          "pyright",
-          "clangd",
-        }
+      "neovim/nvim-lspconfig",
+      dependencies = {
+        {
+          "mason-org/mason.nvim",
+          opts = {
+            ensure_installed = {
+              "lua_ls",
+              "pyright",
+              "clangd",
+            }
+          }
+        },
       }
     },
     {
@@ -111,17 +147,9 @@ require("lazy").setup({
   -- automatically check for plugin updates
   checker = { enabled = true },
 })
-vim.lsp.enable({"luals", "pyright"})
--- lsp
-vim.api.nvim_create_autocmd('LspAttach',{
-  callback = function(ev)
-    local client = vim.lsp.get_client_by_id(ev.data.client_id)
-    if client:supports_method('textDocument/completion') then
-      vim.lsp.completion.enable(true, client.id, ev.buf, {autotrigger = false})
-    end
-  end,
-})
 
+vim.lsp.enable({"lua_ls", "pyright"})
+-- lsp
 
 
 
