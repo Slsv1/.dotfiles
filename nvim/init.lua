@@ -103,18 +103,6 @@ require("lazy").setup({
           { path = "${3rd}/luv/library", words = { "vim%.uv" } },
         }
       },
-      integrations = {
-        -- Fixes lspconfig's workspace management for LuaLS
-        -- Only create a new workspace if the buffer is not part
-        -- of an existing workspace or one of its libraries
-        lspconfig = true,
-        -- add the cmp source for completion of:
-        -- `require "modname"`
-        -- `---@module "modname"`
-        cmp = true,
-        -- same, but for Coq
-        coq = false,
-      },
     },
   },
   -- Configure any other settings here. See the documentation for more details.
