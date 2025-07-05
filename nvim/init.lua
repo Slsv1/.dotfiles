@@ -1,4 +1,7 @@
 -- config :yum:
+-- enable logging
+
+vim.lsp.set_log_level("debug")
 
 -- [[ keybinds ]]
 vim.g.mapleader = " "
@@ -7,13 +10,34 @@ vim.g.maplocalleader = " "
 local NORMAL_MODE_KEY = "kj"
 local options = { noremap = true }
 vim.keymap.set("i", NORMAL_MODE_KEY, "<cmd>nohlsearch<CR><Esc>", options)
-    
+
 
 -- [[ functional options ]]
 -- hightlight on yap
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
-vim.o.ignorecase = true
-vim.o.smartcase = true
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+vim.diagnostic.config({
+  virtual_text = true,
+  virtual_lines = false
+})
+
+vim.opt.number = true
+vim.opt.showmode = false
+vim.opt.breakindent = true
+vim.opt.signcolumn = 'yes'
+
+vim.opt.list = true
+vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+
+-- Preview substitutions live, as you type!
+vim.opt.inccommand = 'split'
+
+-- -- Show which line your cursor is on
+-- vim.o.cursorline = true
+
+-- Minimal number of screen lines to keep above and below the cursor.
+vim.opt.scrolloff = 10
 
 -- use spaces instead of tabs for lua files
 vim.api.nvim_create_autocmd("FileType", {
@@ -42,13 +66,56 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-
+-- require('lazydev').find_workspace(buf?)
 -- Setup lazy.nvim plugins
 require("lazy").setup({
   spec = {
     -- add your plugins here
-    { "ellisonleao/gruvbox.nvim", priority = 1000 , config = true, opts = ...},
-    { "mason-org/mason.nvim", opts = {}} -- mason for installing lsp servers
+    {
+      "nvim-treesitter/nvim-treesitter",
+      branch = 'master',
+      lazy = false,
+      build = ":TSUpdate"
+    },
+    {
+      "ellisonleao/gruvbox.nvim",
+      priority = 1000 ,
+      config = true,
+      opts = {}
+    },
+    {
+      "mason-org/mason.nvim",
+      opts = {
+        ensure_installed = {
+          "luals",
+          "pyright",
+          "clangd",
+        }
+      }
+    },
+    {
+      "folke/lazydev.nvim",
+      ft = "lua", -- only load on lua files
+      opts = {
+        library = {
+          -- See the configuration section for more details
+          -- Load luvit types when the `vim.uv` word is found
+          { path = "${3rd}/luv/library", words = { "vim%.uv" } },
+        }
+      },
+      integrations = {
+        -- Fixes lspconfig's workspace management for LuaLS
+        -- Only create a new workspace if the buffer is not part
+        -- of an existing workspace or one of its libraries
+        lspconfig = true,
+        -- add the cmp source for completion of:
+        -- `require "modname"`
+        -- `---@module "modname"`
+        cmp = true,
+        -- same, but for Coq
+        coq = false,
+      },
+    },
   },
   -- Configure any other settings here. See the documentation for more details.
   -- colorscheme that will be used when installing plugins.
@@ -56,7 +123,7 @@ require("lazy").setup({
   -- automatically check for plugin updates
   checker = { enabled = true },
 })
-
+vim.lsp.enable({"luals", "pyright"})
 -- lsp
 vim.api.nvim_create_autocmd('LspAttach',{
   callback = function(ev)
@@ -66,26 +133,8 @@ vim.api.nvim_create_autocmd('LspAttach',{
     end
   end,
 })
-vim.lsp.enable({"luals", "pyright"})
 
 
--- visuals
-vim.o.number = true
-vim.o.showmode = false
-vim.o.breakindent = true
-vim.o.signcolumn = 'yes'
-
-vim.o.list = true
-vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
-
--- Preview substitutions live, as you type!
-vim.o.inccommand = 'split'
-
--- -- Show which line your cursor is on
--- vim.o.cursorline = true
-
--- Minimal number of screen lines to keep above and below the cursor.
-vim.o.scrolloff = 10
 
 
 -- gruvbox
