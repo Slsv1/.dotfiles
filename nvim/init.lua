@@ -9,8 +9,22 @@ vim.g.maplocalleader = " "
 
 local NORMAL_MODE_KEY = "kj"
 local options = { noremap = true }
+vim.keymap.set("n", "<C-u>", "<C-u>zz")
+vim.keymap.set("n", "<C-d>", "<C-d>zz")
+
+-- vim.keymap.set("n", "<C-b>", "<C-b>zz")
+-- vim.keymap.set("n", "<C-f>", "<C-f>zz")
 vim.keymap.set("i", NORMAL_MODE_KEY, "<cmd>nohlsearch<CR><Esc>", options)
-vim.o.laststatus=2
+vim.diagnostic.config {
+  virtual_lines = false,
+  virtual_text = true
+}
+vim.keymap.set('n', '<leader>d', function()
+    vim.diagnostic.config {
+        virtual_lines = not vim.diagnostic.config().virtual_lines,
+        virtual_text = not vim.diagnostic.config().virtual_text,
+     }
+end, { desc = 'Toggle diagnostic virtual lines and virtual text' })
 
 -- netrw settigns but i use oil now
 -- vim.keymap.set("n", "<leader>e", ":Ex<CR>")
@@ -18,16 +32,12 @@ vim.o.laststatus=2
 -- vim.g.netrw_liststyle=3-- tree style view in netrw
 -- hightlight on yap
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
+-- vim.api.nvim_get_hl(0, "#Normal#")
 vim.o.ignorecase = true
 vim.o.smartcase = true
-vim.diagnostic.config({
-  virtual_text = true,
-  virtual_lines = false
-})
 
 vim.o.termguicolors = true -- idk if i need this one but just in case
 vim.o.number = true
-vim.o.showmode = false
 vim.o.breakindent = true
 vim.o.signcolumn = 'yes'
 -- vim.o.winborder = 'solid'
@@ -43,7 +53,6 @@ vim.o.inccommand = 'split'
 
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.o.scrolloff = 10
-
 
 
 -- use spaces instead of tabs for lua files
@@ -204,8 +213,6 @@ require("lazy").setup({
 
 vim.lsp.enable({ "lua_ls", "pyright" })
 -- lsp
-
-
 -- gruvbox
 -- Default options:
 require("gruvbox").setup({
@@ -234,3 +241,99 @@ require("gruvbox").setup({
 
 
 vim.cmd([[colorscheme gruvbox]])
+local modes = {
+  ["n"] = "NORMAL",
+  ["no"] = "NORMAL",
+  ["v"] = "VISUAL",
+  ["V"] = "VISUAL LINE",
+  ["␖"] = "VISUAL BLOCK",
+  ["s"] = "SELECT",
+  ["S"] = "SELECT LINE",
+  ["␓"] = "SELECT BLOCK",
+  ["i"] = "INSERT",
+  ["ic"] = "INSERT",
+  ["R"] = "REPLACE",
+  ["Rv"] = "VISUAL REPLACE",
+  ["c"] = "COMMAND",
+  ["cv"] = "VIM EX",
+  ["ce"] = "EX",
+  ["r"] = "PROMPT",
+  ["rm"] = "MOAR",
+  ["r?"] = "CONFIRM",
+  ["!"] = "SHELL",
+  ["t"] = "TERMINAL",
+}
+local function mode()
+  local current_mode = vim.api.nvim_get_mode().mode
+  return string.format("%s", modes[current_mode]):upper()
+end
+
+vim.keymap.set("n", "<leader>t", function()
+end)
+
+local function update_mode_colors()
+  local current_mode = vim.api.nvim_get_mode().mode
+  local mode_color = "%#StatusLineAccent#"
+  if current_mode == "n" then
+      mode_color = "%#StatuslineAccent#"
+  elseif current_mode == "i" or current_mode == "ic" then
+      mode_color = "%#StatuslineInsertAccent#"
+  elseif current_mode == "v" or current_mode == "V" or current_mode == "␖" then
+      mode_color = "%#StatuslineVisualAccent#"
+  elseif current_mode == "R" then
+      mode_color = "%#StatuslineReplaceAccent#"
+  elseif current_mode == "c" then
+      mode_color = "%#StatuslineCmdLineAccent#"
+  elseif current_mode == "t" then
+      mode_color = "%#StatuslineTerminalAccent#"
+  end
+  return mode_color
+end
+
+local function get_color(group, attr)
+    return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID(group)), attr)
+end
+local bg_color = get_color("Normal", "bg#")
+local fg_color = "#ebdbb2"
+local accent_color = "#689d6a"
+vim.print('debug'..bg_color)
+vim.cmd("highlight StatusLine guibg="..bg_color.." guifg="..accent_color) -- active statusline style
+vim.cmd("highlight StatusLineNC guibg="..bg_color.." guifg=".. fg_color) -- inactive statusline style
+vim.cmd("highlight StatusLineInfo guifg=" .. accent_color .. " guifg=".. accent_color) -- inactive statusline style
+vim.cmd("highlight StatusLineBold guifg=".. accent_color.. " gui=bold") -- inactive statusline style
+vim.cmd("highlight Ruler guifg=Red")
+vim.o.rulerformat = "%#Ruler#%l,%c%V%=%P%%"
+
+vim.o.laststatus=2
+vim.o.showmode=false
+vim.cmd("set fillchars=stlnc:-,stl:-")
+vim.api.nvim_create_autocmd({"ModeChanged", "BufEnter", "WinEnter"}, {
+  callback=function()
+    vim.opt_local.statusline=""
+    .."-"
+    .."%#StatusLineBold#"
+    .."%F" -- show file type
+    .."%#StatusLineInfo#"
+    .."-"
+    .."[%N]" -- buffer number
+    .."-"
+    ..mode()
+    .."%#StatusLine#"
+    .."-"
+    .."%=" -- move over to other edge of status line
+    .."%#StatusLineInfo#"
+    .."-%l/%L-%c-"
+  end
+})
+
+vim.api.nvim_create_autocmd({"BufLeave", "WinLeave"}, {
+  callback=function()
+    vim.opt_local.statusline=""
+    .."-"
+    .."%F" -- show file type
+    .." "
+    .."[%N]" -- buffer number
+    .."-"
+  end
+})
+
