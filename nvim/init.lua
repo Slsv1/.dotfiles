@@ -40,7 +40,7 @@ vim.o.termguicolors = true -- idk if i need this one but just in case
 vim.o.number = true
 vim.o.breakindent = true
 vim.o.signcolumn = 'yes'
--- vim.o.winborder = 'solid'
+vim.o.winborder = 'solid'
 
 vim.opt.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
@@ -212,11 +212,9 @@ require("lazy").setup({
 })
 
 vim.lsp.enable({ "lua_ls", "pyright" })
--- lsp
--- gruvbox
--- Default options:
+
 require("gruvbox").setup({
-  terminal_colors = false, -- add neovim terminal colors
+  terminal_colors = true, -- add neovim terminal colors
   undercurl = true,
   underline = false,
   bold = true,
@@ -232,7 +230,7 @@ require("gruvbox").setup({
   invert_signs = false,
   invert_tabline = false,
   inverse = true, -- invert background for search, diffs, statuslines and errors
-  contrast = "",  -- can be "hard", "soft" or empty string
+  contrast = "hard",  -- can be "hard", "soft" or empty string
   palette_overrides = {},
   overrides = {},
   dim_inactive = false,
@@ -271,38 +269,20 @@ end
 vim.keymap.set("n", "<leader>t", function()
 end)
 
-local function update_mode_colors()
-  local current_mode = vim.api.nvim_get_mode().mode
-  local mode_color = "%#StatusLineAccent#"
-  if current_mode == "n" then
-      mode_color = "%#StatuslineAccent#"
-  elseif current_mode == "i" or current_mode == "ic" then
-      mode_color = "%#StatuslineInsertAccent#"
-  elseif current_mode == "v" or current_mode == "V" or current_mode == "␖" then
-      mode_color = "%#StatuslineVisualAccent#"
-  elseif current_mode == "R" then
-      mode_color = "%#StatuslineReplaceAccent#"
-  elseif current_mode == "c" then
-      mode_color = "%#StatuslineCmdLineAccent#"
-  elseif current_mode == "t" then
-      mode_color = "%#StatuslineTerminalAccent#"
-  end
-  return mode_color
-end
 
 local function get_color(group, attr)
     return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID(group)), attr)
 end
 local bg_color = get_color("Normal", "bg#")
-local fg_color = "#ebdbb2"
+local fg_color = get_color("Normal", "fg#")
 local accent_color = "#689d6a"
 vim.print('debug'..bg_color)
-vim.cmd("highlight StatusLine guibg="..bg_color.." guifg="..accent_color) -- active statusline style
+vim.cmd("highlight StatusLine guibg="..bg_color.." guifg="..fg_color) -- active statusline style
 vim.cmd("highlight StatusLineNC guibg="..bg_color.." guifg=".. fg_color) -- inactive statusline style
-vim.cmd("highlight StatusLineInfo guifg=" .. accent_color .. " guifg=".. accent_color) -- inactive statusline style
-vim.cmd("highlight StatusLineBold guifg=".. accent_color.. " gui=bold") -- inactive statusline style
+vim.cmd("highlight StatusLineInfo guifg=" .. fg_color ) -- inactive statusline style
+vim.cmd("highlight StatusLineBold guifg=".. fg_color.. " gui=bold") -- inactive statusline style
 vim.cmd("highlight Ruler guifg=Red")
-vim.o.rulerformat = "%#Ruler#%l,%c%V%=%P%%"
+--vim.o.rulerformat = "%#Ruler#%l,%c%V%=%P%%"
 
 vim.o.laststatus=2
 vim.o.showmode=false
@@ -315,7 +295,7 @@ vim.api.nvim_create_autocmd({"ModeChanged", "BufEnter", "WinEnter"}, {
     .."%F" -- show file type
     .."%#StatusLineInfo#"
     .."-"
-    .."[%N]" -- buffer number
+    .."%N" -- buffer number
     .."-"
     ..mode()
     .."%#StatusLine#"
@@ -332,7 +312,7 @@ vim.api.nvim_create_autocmd({"BufLeave", "WinLeave"}, {
     .."-"
     .."%F" -- show file type
     .." "
-    .."[%N]" -- buffer number
+    .."%N" -- buffer number
     .."-"
   end
 })
