@@ -2,6 +2,12 @@
 -- enable logging
 
 vim.lsp.set_log_level("debug")
+local lsp_servers = {
+  "lua_ls",
+  "pyright",
+  "clangd",
+  "cmake",
+}
 
 -- [[ keybinds ]]
 vim.g.mapleader = " "
@@ -12,12 +18,14 @@ local options = { noremap = true }
 vim.keymap.set("n", "<C-u>", "<C-u>zz")
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
 
+
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
 -- vim.keymap.set("n", "<C-f>", "<C-f>zz")
 vim.keymap.set("i", NORMAL_MODE_KEY, "<cmd>nohlsearch<CR><Esc>", options)
 vim.diagnostic.config {
   virtual_lines = false,
-  virtual_text = true
+  virtual_text = true,
+
 }
 vim.keymap.set('n', '<leader>d', function()
     vim.diagnostic.config {
@@ -25,6 +33,8 @@ vim.keymap.set('n', '<leader>d', function()
         virtual_text = not vim.diagnostic.config().virtual_text,
      }
 end, { desc = 'Toggle diagnostic virtual lines and virtual text' })
+
+vim.o.clipboard="unnamed"
 
 -- netrw settigns but i use oil now
 -- vim.keymap.set("n", "<leader>e", ":Ex<CR>")
@@ -54,21 +64,34 @@ vim.o.inccommand = 'split'
 -- Minimal number of screen lines to keep above and below the cursor.
 vim.o.scrolloff = 10
 
+-- default tab settings
+vim.o.tabstop = 4
+vim.o.shiftwidth = 4
+local function config_tabs(pattern, use_spaces, length)
+  if use_spaces then
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = pattern,
+      callback = function()
+        vim.opt_local.expandtab = true
+        vim.opt_local.shiftwidth = length
+        vim.opt_local.softtabstop = length
+      end,
+    })
+  else
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = pattern,
+      callback = function()
+        vim.opt_local.tabstop = length
+        vim.opt_local.shiftwidth = length
+      end,
+    })
+  end
+end
 
--- use spaces instead of tabs for lua files
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "lua",
-  callback = function()
-    vim.opt_local.expandtab = true
-    vim.opt_local.shiftwidth = 2
-    vim.opt_local.softtabstop = 2
-  end,
-})
-vim.api.nvim_create_autocmd('LspAttach', {
-  group = vim.api.nvim_create_augroup('my.lsp', {}),
-  callback = function(args)
-  end,
-})
+config_tabs("lua", true, 2)
+config_tabs("cpp", true, 4)
+config_tabs("python", true, 4)
+
 
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -125,11 +148,7 @@ require("lazy").setup({
         {
           "mason-org/mason.nvim",
           opts = {
-            ensure_installed = {
-              "lua_ls",
-              "pyright",
-              "clangd",
-            }
+            ensure_installed = lsp_servers
           }
         },
       }
@@ -211,7 +230,11 @@ require("lazy").setup({
   checker = { enabled = true },
 })
 
-vim.lsp.enable({ "lua_ls", "pyright" })
+vim.lsp.enable(lsp_servers)
+
+
+-- Visuals
+----------
 
 require("gruvbox").setup({
   terminal_colors = true, -- add neovim terminal colors
@@ -239,6 +262,11 @@ require("gruvbox").setup({
 
 
 vim.cmd([[colorscheme gruvbox]])
+
+
+-- disable grayed out functions when unused
+vim.cmd([[highlight DiagnosticUnnecessary guifg=NONE]])
+
 local modes = {
   ["n"] = "NORMAL",
   ["no"] = "NORMAL",
@@ -266,23 +294,18 @@ local function mode()
   return string.format("%s", modes[current_mode]):upper()
 end
 
-vim.keymap.set("n", "<leader>t", function()
-end)
-
-
+-- get the normal colors
 local function get_color(group, attr)
     return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID(group)), attr)
 end
-local bg_color = get_color("Normal", "bg#")
 local fg_color = get_color("Normal", "fg#")
-local accent_color = "#689d6a"
-vim.print('debug'..bg_color)
-vim.cmd("highlight StatusLine guibg="..bg_color.." guifg="..fg_color) -- active statusline style
-vim.cmd("highlight StatusLineNC guibg="..bg_color.." guifg=".. fg_color) -- inactive statusline style
+
+-- statusline colors
+vim.cmd("highlight StatusLine guibg=NONE".." guifg="..fg_color) -- active statusline style
+vim.cmd("highlight StatusLineNC guibg=NONE".." guifg=".. fg_color) -- inactive statusline style
 vim.cmd("highlight StatusLineInfo guifg=" .. fg_color ) -- inactive statusline style
 vim.cmd("highlight StatusLineBold guifg=".. fg_color.. " gui=bold") -- inactive statusline style
-vim.cmd("highlight Ruler guifg=Red")
---vim.o.rulerformat = "%#Ruler#%l,%c%V%=%P%%"
+
 
 vim.o.laststatus=2
 vim.o.showmode=false
@@ -317,3 +340,18 @@ vim.api.nvim_create_autocmd({"BufLeave", "WinLeave"}, {
   end
 })
 
+-- make signcolumn have same bg as usual
+local function make_default_bg(group)
+  local maybe_fg_color = get_color(group, "fg#")
+  if #maybe_fg_color > 0 then
+    vim.cmd("highlight " .. group .. " guibg=NONE".. " guifg=" .. maybe_fg_color)
+  else
+    vim.cmd("highlight " .. group .. " guibg=NONE")
+  end
+end
+make_default_bg("SignColumn")
+make_default_bg("DiagnosticSignError")
+make_default_bg("DiagnosticSignWarn")
+make_default_bg("DiagnosticSignInfo")
+make_default_bg("DiagnosticSignHint")
+make_default_bg("DiagnosticSignOk")
