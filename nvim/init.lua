@@ -17,6 +17,7 @@ local NORMAL_MODE_KEY = "kj"
 local options = { noremap = true }
 vim.keymap.set("n", "<C-u>", "<C-u>zz")
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
+vim.keymap.set("n", "gd", "<C-]>")
 
 
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
