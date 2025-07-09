@@ -34,7 +34,7 @@ vim.keymap.set('n', '<leader>d', function()
      }
 end, { desc = 'Toggle diagnostic virtual lines and virtual text' })
 
-vim.o.clipboard="unnamed"
+vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
 
 -- netrw settigns but i use oil now
 -- vim.keymap.set("n", "<leader>e", ":Ex<CR>")
