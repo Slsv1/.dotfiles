@@ -1,43 +1,105 @@
 -- config :yum:
 -- enable logging
 
-vim.lsp.set_log_level("debug")
-local lsp_servers = {
-	"lua_ls",
-	"pyright",
-	"clangd",
-	"cmake",
+
+---@class cfg
+local cfg = {
+	colorscheme = "gruvbox",
+	max_scroll_off = 10,
+	plugins = {
+		tree_sitter_languages = {
+			"bash",
+			"c",
+			"diff",
+			"html",
+			"lua",
+			"luadoc",
+			"markdown",
+			"markdown_inline",
+			"query",
+			"vim",
+			"vimdoc",
+		},
+	},
+	lsp = {
+		active_servers = {
+			"lua_ls",
+			"pyright",
+			"clangd",
+			"cmake",
+		},
+		diagnostics = true,
+		gray_out_unnecesary = false,
+	},
+	tab_config = {
+		per_language_config = {
+			python = {indent = 4, spaces = true},
+			lua = {indent = 4, spaces = false},
+			c = {indent = 4, spaces = true},
+			cpp = {indent = 4, spaces = true},
+		},
+	},
+	sign_column = {
+		flat = true
+	},
+	cursor_line = true,
+	custom_status_bar = true,
+	use_system_clipboard = true,
+	fancy_whitespace = true,
+	keybinds = {
+		center_when_jumping = true,
+		leader = " ",
+		normal_mode = "kj",
+		format = "g=",
+		lsp_go_definition = "gd",
+		diagnostic_mode_toggle = "<leader>d",
+	},
+	misc = true,
 }
 
--- [[ keybinds ]]
-vim.g.mapleader = " "
-vim.g.maplocalleader = " "
+-- vim.lsp.set_log_level("debug")
 
-local NORMAL_MODE_KEY = "kj"
-local options = { noremap = true }
-vim.keymap.set("n", "<C-u>", "<C-u>zz")
-vim.keymap.set("n", "<C-d>", "<C-d>zz")
-vim.keymap.set("n", "gd", "<C-]>")
-vim.keymap.set("n", "g=", function()
-	vim.lsp.buf.format()
-	vim.print("buffer formatted")
-end)
+if cfg.keybinds then
+	-- [[ keybinds ]]
+	vim.g.mapleader = cfg.keybinds.leader
+	vim.g.maplocalleader = cfg.keybinds.leader
+
+	local options = { noremap = true }
+
+	if cfg.keybinds.center_when_jumping then
+		vim.keymap.set("n", "<C-u>", "<C-u>zz")
+		vim.keymap.set("n", "<C-d>", "<C-d>zz")
+	end
+	vim.keymap.set("n", cfg.keybinds.lsp_go_definition, "<C-]>")
+	vim.keymap.set("i", cfg.keybinds.normal_mode, "<cmd>nohlsearch<CR><Esc>", options)
+
+	vim.keymap.set("n", cfg.keybinds.format, function()
+		vim.lsp.buf.format()
+		vim.print("buffer formatted")
+	end)
+
+	if cfg.lsp.diagnostics then
+		vim.keymap.set("n", cfg.keybinds.diagnostic_mode_toggle, function()
+			vim.diagnostic.config({
+				virtual_lines = not vim.diagnostic.config().virtual_lines,
+				virtual_text = not vim.diagnostic.config().virtual_text,
+			})
+		end, { desc = "Toggle diagnostic virtual lines and virtual text" })
+	end
+end
 
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
 -- vim.keymap.set("n", "<C-f>", "<C-f>zz")
-vim.keymap.set("i", NORMAL_MODE_KEY, "<cmd>nohlsearch<CR><Esc>", options)
-vim.diagnostic.config({
-	virtual_lines = false,
-	virtual_text = true,
-})
-vim.keymap.set("n", "<leader>d", function()
+if cfg.lsp.diagnostics then
 	vim.diagnostic.config({
-		virtual_lines = not vim.diagnostic.config().virtual_lines,
-		virtual_text = not vim.diagnostic.config().virtual_text,
+		virtual_lines = false,
+		virtual_text = true,
 	})
-end, { desc = "Toggle diagnostic virtual lines and virtual text" })
+end
 
-vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
+if cfg.use_system_clipboard then
+	vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
+end
 
 -- netrw settigns but i use oil now
 -- vim.keymap.set("n", "<leader>e", ":Ex<CR>")
@@ -46,76 +108,83 @@ vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
 -- hightlight on yap
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 -- vim.api.nvim_get_hl(0, "#Normal#")
-vim.o.ignorecase = true
-vim.o.smartcase = true
+if cfg.misc then
+	vim.o.ignorecase = true
+	vim.o.smartcase = true
 
-vim.o.termguicolors = true -- idk if i need this one but just in case
-vim.o.number = true
-vim.o.breakindent = true
-vim.o.signcolumn = "yes"
-vim.o.winborder = "solid"
+	vim.o.termguicolors = true -- idk if i need this one but just in case
+	vim.o.number = true
+	vim.o.breakindent = true
+	-- Preview substitutions live, as you type!
+	vim.o.inccommand = "split"
+end
 
-vim.opt.list = true
-vim.opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
+if cfg.sign_column then
+	vim.o.signcolumn = "yes"
+end
 
--- Preview substitutions live, as you type!
-vim.o.inccommand = "split"
-
--- -- Show which line your cursor is on
--- vim.o.cursorline = true
+if cfg.fancy_whitespace then
+	vim.opt.list = true
+	vim.opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
+end
 
 -- Minimal number of screen lines to keep above and below the cursor.
-vim.o.scrolloff = 10
+if cfg.max_scroll_off ~= nil then
+	vim.o.scrolloff = cfg.max_scroll_off
+end
 
--- default tab settings
-vim.o.tabstop = 4
-vim.o.shiftwidth = 4
-local function config_tabs(pattern, use_spaces, length)
-	if use_spaces then
-		vim.api.nvim_create_autocmd("FileType", {
-			pattern = pattern,
-			callback = function()
-				vim.opt_local.expandtab = true
-				vim.opt_local.shiftwidth = length
-				vim.opt_local.softtabstop = length
-			end,
-		})
-	else
-		vim.api.nvim_create_autocmd("FileType", {
-			pattern = pattern,
-			callback = function()
-				vim.opt_local.tabstop = length
-				vim.opt_local.shiftwidth = length
-			end,
-		})
+if cfg.tab_config then
+	-- default tab settings
+	vim.o.tabstop = 4
+	vim.o.shiftwidth = 4
+	local function config_tabs(pattern, use_spaces, length)
+		if use_spaces then
+			vim.api.nvim_create_autocmd("FileType", {
+				pattern = pattern,
+				callback = function()
+					vim.opt_local.expandtab = true
+					vim.opt_local.shiftwidth = length
+					vim.opt_local.softtabstop = length
+				end,
+			})
+		else
+			vim.api.nvim_create_autocmd("FileType", {
+				pattern = pattern,
+				callback = function()
+					vim.opt_local.tabstop = length
+					vim.opt_local.shiftwidth = length
+				end,
+			})
+		end
+	end
+	for language, opts in pairs(cfg.tab_config.per_language_config) do
+		config_tabs(language, opts.spaces, opts.indent)
 	end
 end
 
-config_tabs("lua", false, 4)
-config_tabs("cpp", true, 4)
-config_tabs("python", true, 2)
-
--- Bootstrap lazy.nvim
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not (vim.uv or vim.loop).fs_stat(lazypath) then
-	local lazyrepo = "https://github.com/folke/lazy.nvim.git"
-	local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
-	if vim.v.shell_error ~= 0 then
-		vim.api.nvim_echo({
-			{ "Failed to clone lazy.nvim:\n", "ErrorMsg" },
-			{ out,                            "WarningMsg" },
-			{ "\nPress any key to exit..." },
-		}, true, {})
-		vim.fn.getchar()
-		os.exit(1)
+if cfg.plugins then
+	-- Bootstrap lazy.nvim
+	local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+	if not (vim.uv or vim.loop).fs_stat(lazypath) then
+		local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+		local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+		if vim.v.shell_error ~= 0 then
+			vim.api.nvim_echo({
+				{ "Failed to clone lazy.nvim:\n", "ErrorMsg" },
+				{ out,                            "WarningMsg" },
+				{ "\nPress any key to exit..." },
+			}, true, {})
+			vim.fn.getchar()
+			os.exit(1)
+		end
 	end
-end
-vim.opt.rtp:prepend(lazypath)
+	vim.opt.rtp:prepend(lazypath)
 
--- require('lazydev').find_workspace(buf?)
--- Setup lazy.nvim plugins
-require("lazy").setup({
-	spec = {
+
+	-- require('lazydev').find_workspace(buf?)
+	-- Setup lazy.nvim plugins
+
+	local plugins = {
 		-- add your plugins here
 		{ -- Highlight, edit, and navigate code
 			"nvim-treesitter/nvim-treesitter",
@@ -157,7 +226,31 @@ require("lazy").setup({
 		{
 			"ellisonleao/gruvbox.nvim",
 			priority = 1000,
-			config = true,
+			config = function ()
+				require("gruvbox").setup({
+					terminal_colors = true, -- add neovim terminal colors
+					undercurl = true,
+					underline = false,
+					bold = true,
+					italic = {
+						strings = false,
+						emphasis = false,
+						comments = false,
+						operators = false,
+						folds = false,
+					},
+					strikethrough = true,
+					invert_selection = false,
+					invert_signs = false,
+					invert_tabline = false,
+					inverse = true, -- invert background for search, diffs, statuslines and errors
+					contrast = "hard", -- can be "hard", "soft" or empty string
+					palette_overrides = {},
+					overrides = {},
+					dim_inactive = false,
+					transparent_mode = false,
+				})
+			end,
 			opts = {},
 		},
 		{
@@ -172,7 +265,6 @@ require("lazy").setup({
 			lazy = false,
 			config = function()
 				require("oil").setup()
-				vim.keymap.set("n", "<leader>e", "<CMD>Oil<CR>", { desc = "Open parent directory" })
 			end,
 		},
 		{
@@ -181,7 +273,7 @@ require("lazy").setup({
 				{
 					"mason-org/mason.nvim",
 					opts = {
-						ensure_installed = lsp_servers,
+						ensure_installed = cfg.lsp.active_servers,
 					},
 				},
 			},
@@ -255,121 +347,111 @@ require("lazy").setup({
 			},
 			opts_extend = { "sources.default" },
 		},
-	},
-	-- Configure any other settings here. See the documentation for more details.
-	-- colorscheme that will be used when installing plugins.
-	install = { colorscheme = { "gruvbox" } },
-	-- automatically check for plugin updates
-	checker = { enabled = true },
-})
+	}
 
-vim.lsp.enable(lsp_servers)
+	require("lazy").setup({
+		-- Configure any other settings here. See the documentation for more details.
+		-- colorscheme that will be used when installing plugins.
+		spec = plugins,
+		install = { colorscheme = { "gruvbox" } },
+		-- automatically check for plugin updates
+		checker = { enabled = true },
+	})
+end
+
+if cfg.lsp then
+	vim.lsp.enable(cfg.lsp.active_servers)
+end
 
 -- Visuals
 ----------
 
-require("gruvbox").setup({
-	terminal_colors = true, -- add neovim terminal colors
-	undercurl = true,
-	underline = false,
-	bold = true,
-	italic = {
-		strings = false,
-		emphasis = false,
-		comments = false,
-		operators = false,
-		folds = false,
-	},
-	strikethrough = true,
-	invert_selection = false,
-	invert_signs = false,
-	invert_tabline = false,
-	inverse = true, -- invert background for search, diffs, statuslines and errors
-	contrast = "hard", -- can be "hard", "soft" or empty string
-	palette_overrides = {},
-	overrides = {},
-	dim_inactive = false,
-	transparent_mode = false,
-})
 
-vim.cmd([[colorscheme gruvbox]])
-
--- disable grayed out functions when unused
-vim.cmd([[highlight DiagnosticUnnecessary guifg=NONE]])
-
-local modes = {
-	["n"] = "NORMAL",
-	["no"] = "NORMAL",
-	["v"] = "VISUAL",
-	["V"] = "VISUAL LINE",
-	["␖"] = "VISUAL BLOCK",
-	["s"] = "SELECT",
-	["S"] = "SELECT LINE",
-	["␓"] = "SELECT BLOCK",
-	["i"] = "INSERT",
-	["ic"] = "INSERT",
-	["R"] = "REPLACE",
-	["Rv"] = "VISUAL REPLACE",
-	["c"] = "COMMAND",
-	["cv"] = "VIM EX",
-	["ce"] = "EX",
-	["r"] = "PROMPT",
-	["rm"] = "MOAR",
-	["r?"] = "CONFIRM",
-	["!"] = "SHELL",
-	["t"] = "TERMINAL",
-}
-local function mode()
-	local current_mode = vim.api.nvim_get_mode().mode
-	return string.format("%s", modes[current_mode]):upper()
+if cfg.colorscheme then
+	vim.cmd("colorscheme " .. cfg.colorscheme)
 end
 
--- get the normal colors
+-- disable grayed out functions when unused
+if not cfg.lsp.gray_out_unnecesary then
+	vim.cmd([[highlight DiagnosticUnnecessary guifg=NONE]])
+end
+
 local function get_color(group, attr)
 	return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID(group)), attr)
 end
-local fg_color = get_color("Normal", "fg#")
 
--- statusline colors
-vim.cmd("highlight StatusLine guibg=NONE" .. " guifg=" .. fg_color)   -- active statusline style
-vim.cmd("highlight StatusLineNC guibg=NONE" .. " guifg=" .. fg_color) -- inactive statusline style
-vim.cmd("highlight StatusLineInfo guifg=" .. fg_color)                -- inactive statusline style
-vim.cmd("highlight StatusLineBold guifg=" .. fg_color .. " gui=bold") -- inactive statusline style
 
-vim.o.laststatus = 2
-vim.o.showmode = false
-vim.cmd("set fillchars=stlnc:-,stl:-")
-vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter" }, {
-	callback = function()
-		vim.opt_local.statusline = ""
-			.. "-"
-			.. "%#StatusLineBold#"
-			.. "%F" -- show file type
-			.. "%#StatusLineInfo#"
-			.. "-"
-			.. "%N" -- buffer number
-			.. "-"
-			.. mode()
-			.. "%#StatusLine#"
-			.. "-"
-			.. "%=" -- move over to other edge of status line
-			.. "%#StatusLineInfo#"
-			.. "-%l/%L-%c-"
-	end,
-})
+if cfg.custom_status_bar then
+	local modes = {
+		["n"] = "NORMAL",
+		["no"] = "NORMAL",
+		["v"] = "VISUAL",
+		["V"] = "VISUAL LINE",
+		["␖"] = "VISUAL BLOCK",
+		["s"] = "SELECT",
+		["S"] = "SELECT LINE",
+		["␓"] = "SELECT BLOCK",
+		["i"] = "INSERT",
+		["ic"] = "INSERT",
+		["R"] = "REPLACE",
+		["Rv"] = "VISUAL REPLACE",
+		["c"] = "COMMAND",
+		["cv"] = "VIM EX",
+		["ce"] = "EX",
+		["r"] = "PROMPT",
+		["rm"] = "MOAR",
+		["r?"] = "CONFIRM",
+		["!"] = "SHELL",
+		["t"] = "TERMINAL",
+	}
+	local function mode()
+		local current_mode = vim.api.nvim_get_mode().mode
+		return string.format("%s", modes[current_mode]):upper()
+	end
 
-vim.api.nvim_create_autocmd({ "BufLeave", "WinLeave" }, {
-	callback = function()
-		vim.opt_local.statusline = ""
-			.. "-"
-			.. "%F" -- show file type
-			.. " "
-			.. "%N" -- buffer number
-			.. "-"
-	end,
-})
+	-- get the normal colors
+	local fg_color = get_color("Normal", "fg#")
 
--- make signcolumn have same bg as usual
+	-- statusline colors
+	vim.cmd("highlight StatusLine guibg=NONE" .. " guifg=" .. fg_color)   -- active statusline style
+	vim.cmd("highlight StatusLineNC guibg=NONE" .. " guifg=" .. fg_color) -- inactive statusline style
+	vim.cmd("highlight StatusLineInfo guifg=" .. fg_color)                -- inactive statusline style
+	vim.cmd("highlight StatusLineBold guifg=" .. fg_color .. " gui=bold") -- inactive statusline style
+
+	vim.o.laststatus = 2
+	vim.o.showmode = false
+	vim.cmd("set fillchars=stlnc:-,stl:-")
+	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter" }, {
+		callback = function()
+			vim.opt_local.statusline = ""
+				.. "-"
+				.. "%#StatusLineBold#"
+				.. "%F" -- show file type
+				.. "%#StatusLineInfo#"
+				.. "-"
+				.. "%N" -- buffer number
+				.. "-"
+				.. mode()
+				.. "%#StatusLine#"
+				.. "-"
+				.. "%=" -- move over to other edge of status line
+				.. "%#StatusLineInfo#"
+				.. "-%l/%L-%c-"
+		end,
+	})
+
+	vim.api.nvim_create_autocmd({ "BufLeave", "WinLeave" }, {
+		callback = function()
+			vim.opt_local.statusline = ""
+				.. "-"
+				.. "%F" -- show file type
+				.. " "
+				.. "%N" -- buffer number
+				.. "-"
+		end,
+	})
+end
+
 local function make_default_bg(group)
 	local maybe_fg_color = get_color(group, "fg#")
 	if #maybe_fg_color > 0 then
@@ -378,9 +460,19 @@ local function make_default_bg(group)
 		vim.cmd("highlight " .. group .. " guibg=NONE")
 	end
 end
-make_default_bg("SignColumn")
-make_default_bg("DiagnosticSignError")
-make_default_bg("DiagnosticSignWarn")
-make_default_bg("DiagnosticSignInfo")
-make_default_bg("DiagnosticSignHint")
-make_default_bg("DiagnosticSignOk")
+-- make signcolumn have same bg as usual
+if cfg.sign_column.flat then
+	make_default_bg("SignColumn")
+	make_default_bg("DiagnosticSignError")
+	make_default_bg("DiagnosticSignWarn")
+	make_default_bg("DiagnosticSignInfo")
+	make_default_bg("DiagnosticSignHint")
+	make_default_bg("DiagnosticSignOk")
+end
+
+if cfg.cursor_line then
+	-- -- Show which line your cursor is on
+	vim.o.cursorline = true
+	make_default_bg("CursorLineNr")
+	make_default_bg("CursorLine")
+end
