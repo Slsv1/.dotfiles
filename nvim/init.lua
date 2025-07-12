@@ -3,10 +3,10 @@
 
 vim.lsp.set_log_level("debug")
 local lsp_servers = {
-  "lua_ls",
-  "pyright",
-  "clangd",
-  "cmake",
+	"lua_ls",
+	"pyright",
+	"clangd",
+	"cmake",
 }
 
 -- [[ keybinds ]]
@@ -18,22 +18,24 @@ local options = { noremap = true }
 vim.keymap.set("n", "<C-u>", "<C-u>zz")
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
 vim.keymap.set("n", "gd", "<C-]>")
-
+vim.keymap.set("n", "g=", function()
+	vim.lsp.buf.format()
+	vim.print("buffer formatted")
+end)
 
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
 -- vim.keymap.set("n", "<C-f>", "<C-f>zz")
 vim.keymap.set("i", NORMAL_MODE_KEY, "<cmd>nohlsearch<CR><Esc>", options)
-vim.diagnostic.config {
-  virtual_lines = false,
-  virtual_text = true,
-
-}
-vim.keymap.set('n', '<leader>d', function()
-    vim.diagnostic.config {
-        virtual_lines = not vim.diagnostic.config().virtual_lines,
-        virtual_text = not vim.diagnostic.config().virtual_text,
-     }
-end, { desc = 'Toggle diagnostic virtual lines and virtual text' })
+vim.diagnostic.config({
+	virtual_lines = false,
+	virtual_text = true,
+})
+vim.keymap.set("n", "<leader>d", function()
+	vim.diagnostic.config({
+		virtual_lines = not vim.diagnostic.config().virtual_lines,
+		virtual_text = not vim.diagnostic.config().virtual_text,
+	})
+end, { desc = "Toggle diagnostic virtual lines and virtual text" })
 
 vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
 
@@ -50,14 +52,14 @@ vim.o.smartcase = true
 vim.o.termguicolors = true -- idk if i need this one but just in case
 vim.o.number = true
 vim.o.breakindent = true
-vim.o.signcolumn = 'yes'
-vim.o.winborder = 'solid'
+vim.o.signcolumn = "yes"
+vim.o.winborder = "solid"
 
 vim.opt.list = true
-vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+vim.opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
 
 -- Preview substitutions live, as you type!
-vim.o.inccommand = 'split'
+vim.o.inccommand = "split"
 
 -- -- Show which line your cursor is on
 -- vim.o.cursorline = true
@@ -69,286 +71,312 @@ vim.o.scrolloff = 10
 vim.o.tabstop = 4
 vim.o.shiftwidth = 4
 local function config_tabs(pattern, use_spaces, length)
-  if use_spaces then
-    vim.api.nvim_create_autocmd("FileType", {
-      pattern = pattern,
-      callback = function()
-        vim.opt_local.expandtab = true
-        vim.opt_local.shiftwidth = length
-        vim.opt_local.softtabstop = length
-      end,
-    })
-  else
-    vim.api.nvim_create_autocmd("FileType", {
-      pattern = pattern,
-      callback = function()
-        vim.opt_local.tabstop = length
-        vim.opt_local.shiftwidth = length
-      end,
-    })
-  end
+	if use_spaces then
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = pattern,
+			callback = function()
+				vim.opt_local.expandtab = true
+				vim.opt_local.shiftwidth = length
+				vim.opt_local.softtabstop = length
+			end,
+		})
+	else
+		vim.api.nvim_create_autocmd("FileType", {
+			pattern = pattern,
+			callback = function()
+				vim.opt_local.tabstop = length
+				vim.opt_local.shiftwidth = length
+			end,
+		})
+	end
 end
 
-config_tabs("lua", true, 2)
+config_tabs("lua", false, 4)
 config_tabs("cpp", true, 4)
-config_tabs("python", true, 4)
-
+config_tabs("python", true, 2)
 
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
-  local lazyrepo = "https://github.com/folke/lazy.nvim.git"
-  local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
-  if vim.v.shell_error ~= 0 then
-    vim.api.nvim_echo({
-      { "Failed to clone lazy.nvim:\n", "ErrorMsg" },
-      { out,                            "WarningMsg" },
-      { "\nPress any key to exit..." },
-    }, true, {})
-    vim.fn.getchar()
-    os.exit(1)
-  end
+	local lazyrepo = "https://github.com/folke/lazy.nvim.git"
+	local out = vim.fn.system({ "git", "clone", "--filter=blob:none", "--branch=stable", lazyrepo, lazypath })
+	if vim.v.shell_error ~= 0 then
+		vim.api.nvim_echo({
+			{ "Failed to clone lazy.nvim:\n", "ErrorMsg" },
+			{ out,                            "WarningMsg" },
+			{ "\nPress any key to exit..." },
+		}, true, {})
+		vim.fn.getchar()
+		os.exit(1)
+	end
 end
 vim.opt.rtp:prepend(lazypath)
 
 -- require('lazydev').find_workspace(buf?)
 -- Setup lazy.nvim plugins
 require("lazy").setup({
-  spec = {
-    -- add your plugins here
-    -- {
-    --   "nvim-treesitter/nvim-treesitter",
-    --   branch = 'master',
-    --   lazy = false,
-    --   build = ":TSUpdate"
-    -- },
-    {
-      "ellisonleao/gruvbox.nvim",
-      priority = 1000,
-      config = true,
-      opts = {}
-    },
-    {
-      'stevearc/oil.nvim',
-      ---@module 'oil'
-      ---@type oil.SetupOpts
-      opts = {},
-      -- Optional dependencies
-      -- dependencies = { { "echasnovski/mini.icons", opts = {} } },
-      dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
-      -- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
-      lazy = false,
-      config = function ()
-        require("oil").setup()
-        vim.keymap.set("n", "<leader>e", "<CMD>Oil<CR>", { desc = "Open parent directory" })
-      end
-    },
-    {
-      "neovim/nvim-lspconfig",
-      dependencies = {
-        {
-          "mason-org/mason.nvim",
-          opts = {
-            ensure_installed = lsp_servers
-          }
-        },
-      }
-    },
-    {
-      "folke/lazydev.nvim",
-      ft = "lua", -- only load on lua files
-      opts = {
-        library = {
-          -- See the configuration section for more details
-          -- Load luvit types when the `vim.uv` word is found
-          { path = "${3rd}/luv/library", words = { "vim%.uv" } },
-        }
-      },
-    },
-    {
-      'saghen/blink.cmp',
-      -- optional: provides snippets for the snippet source
-      dependencies = { 'rafamadriz/friendly-snippets' },
+	spec = {
+		-- add your plugins here
+		{ -- Highlight, edit, and navigate code
+			"nvim-treesitter/nvim-treesitter",
+			build = ":TSUpdate",
+			main = "nvim-treesitter.configs", -- Sets main module to use for opts
+			-- [[ Configure Treesitter ]] See `:help nvim-treesitter`
+			opts = {
+				ensure_installed = {
+					"bash",
+					"c",
+					"diff",
+					"html",
+					"lua",
+					"luadoc",
+					"markdown",
+					"markdown_inline",
+					"query",
+					"vim",
+					"vimdoc",
+				},
+				-- Autoinstall languages that are not installed
+				auto_install = true,
+				highlight = {
+					enable = true,
+					-- Some languages depend on vim's regex highlighting system (such as Ruby) for indent rules.
+					--  If you are experiencing weird indenting issues, add the language to
+					--  the list of additional_vim_regex_highlighting and disabled languages for indent.
+					additional_vim_regex_highlighting = { "ruby" },
+				},
+				indent = { enable = true, disable = { "ruby" } },
+			},
+			-- There are additional nvim-treesitter modules that you can use to interact
+			-- with nvim-treesitter. You should go explore a few and see what interests you:
+			--
+			--    - Incremental selection: Included, see `:help nvim-treesitter-incremental-selection-mod`
+			--    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
+			--    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
+		},
+		{
+			"ellisonleao/gruvbox.nvim",
+			priority = 1000,
+			config = true,
+			opts = {},
+		},
+		{
+			"stevearc/oil.nvim",
+			---@module 'oil'
+			---@type oil.SetupOpts
+			opts = {},
+			-- Optional dependencies
+			-- dependencies = { { "echasnovski/mini.icons", opts = {} } },
+			dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
+			-- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
+			lazy = false,
+			config = function()
+				require("oil").setup()
+				vim.keymap.set("n", "<leader>e", "<CMD>Oil<CR>", { desc = "Open parent directory" })
+			end,
+		},
+		{
+			"neovim/nvim-lspconfig",
+			dependencies = {
+				{
+					"mason-org/mason.nvim",
+					opts = {
+						ensure_installed = lsp_servers,
+					},
+				},
+			},
+		},
+		{
+			"folke/lazydev.nvim",
+			ft = "lua", -- only load on lua files
+			opts = {
+				library = {
+					-- See the configuration section for more details
+					-- Load luvit types when the `vim.uv` word is found
+					{ path = "${3rd}/luv/library", words = { "vim%.uv" } },
+				},
+			},
+		},
+		{
+			"saghen/blink.cmp",
+			-- optional: provides snippets for the snippet source
+			dependencies = { "rafamadriz/friendly-snippets" },
 
-      -- use a release tag to download pre-built binaries
-      version = '1.*',
-      -- AND/OR build from source, requires nightly: https://rust-lang.github.io/rustup/concepts/channels.html#working-with-nightly-rust
-      -- build = 'cargo build --release',
-      -- If you use nix, you can build from source using latest nightly rust with:
-      -- build = 'nix run .#build-plugin',
+			-- use a release tag to download pre-built binaries
+			version = "1.*",
+			-- AND/OR build from source, requires nightly: https://rust-lang.github.io/rustup/concepts/channels.html#working-with-nightly-rust
+			-- build = 'cargo build --release',
+			-- If you use nix, you can build from source using latest nightly rust with:
+			-- build = 'nix run .#build-plugin',
 
-      ---@module 'blink.cmp'
-      ---@type blink.cmp.Config
-      opts = {
-        -- 'default' (recommended) for mappings similar to built-in completions (C-y to accept)
-        -- 'super-tab' for mappings similar to vscode (tab to accept)
-        -- 'enter' for enter to accept
-        -- 'none' for no mappings
-        --
-        -- All presets have the following mappings:
-        -- C-space: Open menu or open docs if already open
-        -- C-n/C-p or Up/Down: Select next/previous item
-        -- C-e: Hide menu
-        -- C-k: Toggle signature help (if signature.enabled = true)
-        --
-        -- See :h blink-cmp-config-keymap for defining your own keymap
-        keymap = { preset = 'default' },
+			---@module 'blink.cmp'
+			---@type blink.cmp.Config
+			opts = {
+				-- 'default' (recommended) for mappings similar to built-in completions (C-y to accept)
+				-- 'super-tab' for mappings similar to vscode (tab to accept)
+				-- 'enter' for enter to accept
+				-- 'none' for no mappings
+				--
+				-- All presets have the following mappings:
+				-- C-space: Open menu or open docs if already open
+				-- C-n/C-p or Up/Down: Select next/previous item
+				-- C-e: Hide menu
+				-- C-k: Toggle signature help (if signature.enabled = true)
+				--
+				-- See :h blink-cmp-config-keymap for defining your own keymap
+				keymap = { preset = "default" },
 
+				appearance = {
+					-- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
+					-- Adjusts spacing to ensure icons are aligned
+					nerd_font_variant = "mono",
+				},
 
-        appearance = {
-          -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
-          -- Adjusts spacing to ensure icons are aligned
-          nerd_font_variant = 'mono'
-        },
+				-- (Default) Only show the documentation popup when manually triggered
+				completion = {
+					menu = {
+						border = "padded",
+					},
+					documentation = { auto_show = true },
+				},
 
-        -- (Default) Only show the documentation popup when manually triggered
-        completion = {
-          menu = {
-            border = "padded"
-          },
-          documentation = { auto_show = true } },
+				-- Default list of enabled providers defined so that you can extend it
+				-- elsewhere in your config, without redefining it, due to `opts_extend`
+				sources = {
+					default = { "lsp", "path", "snippets", "buffer" },
+				},
 
-        -- Default list of enabled providers defined so that you can extend it
-        -- elsewhere in your config, without redefining it, due to `opts_extend`
-        sources = {
-          default = { 'lsp', 'path', 'snippets', 'buffer' },
-        },
-
-        -- (Default) Rust fuzzy matcher for typo resistance and significantly better performance
-        -- You may use a lua implementation instead by using `implementation = "lua"` or fallback to the lua implementation,
-        -- when the Rust fuzzy matcher is not available, by using `implementation = "prefer_rust"`
-        --
-        -- See the fuzzy documentation for more information
-        fuzzy = { implementation = "prefer_rust_with_warning" }
-      },
-      opts_extend = { "sources.default" }
-    }
-  },
-  -- Configure any other settings here. See the documentation for more details.
-  -- colorscheme that will be used when installing plugins.
-  install = { colorscheme = { "gruvbox" } },
-  -- automatically check for plugin updates
-  checker = { enabled = true },
+				-- (Default) Rust fuzzy matcher for typo resistance and significantly better performance
+				-- You may use a lua implementation instead by using `implementation = "lua"` or fallback to the lua implementation,
+				-- when the Rust fuzzy matcher is not available, by using `implementation = "prefer_rust"`
+				--
+				-- See the fuzzy documentation for more information
+				fuzzy = { implementation = "prefer_rust_with_warning" },
+			},
+			opts_extend = { "sources.default" },
+		},
+	},
+	-- Configure any other settings here. See the documentation for more details.
+	-- colorscheme that will be used when installing plugins.
+	install = { colorscheme = { "gruvbox" } },
+	-- automatically check for plugin updates
+	checker = { enabled = true },
 })
 
 vim.lsp.enable(lsp_servers)
-
 
 -- Visuals
 ----------
 
 require("gruvbox").setup({
-  terminal_colors = true, -- add neovim terminal colors
-  undercurl = true,
-  underline = false,
-  bold = true,
-  italic = {
-    strings = false,
-    emphasis = false,
-    comments = false,
-    operators = false,
-    folds = false,
-  },
-  strikethrough = true,
-  invert_selection = false,
-  invert_signs = false,
-  invert_tabline = false,
-  inverse = true, -- invert background for search, diffs, statuslines and errors
-  contrast = "hard",  -- can be "hard", "soft" or empty string
-  palette_overrides = {},
-  overrides = {},
-  dim_inactive = false,
-  transparent_mode = false,
+	terminal_colors = true, -- add neovim terminal colors
+	undercurl = true,
+	underline = false,
+	bold = true,
+	italic = {
+		strings = false,
+		emphasis = false,
+		comments = false,
+		operators = false,
+		folds = false,
+	},
+	strikethrough = true,
+	invert_selection = false,
+	invert_signs = false,
+	invert_tabline = false,
+	inverse = true, -- invert background for search, diffs, statuslines and errors
+	contrast = "hard", -- can be "hard", "soft" or empty string
+	palette_overrides = {},
+	overrides = {},
+	dim_inactive = false,
+	transparent_mode = false,
 })
 
-
 vim.cmd([[colorscheme gruvbox]])
-
 
 -- disable grayed out functions when unused
 vim.cmd([[highlight DiagnosticUnnecessary guifg=NONE]])
 
 local modes = {
-  ["n"] = "NORMAL",
-  ["no"] = "NORMAL",
-  ["v"] = "VISUAL",
-  ["V"] = "VISUAL LINE",
-  ["␖"] = "VISUAL BLOCK",
-  ["s"] = "SELECT",
-  ["S"] = "SELECT LINE",
-  ["␓"] = "SELECT BLOCK",
-  ["i"] = "INSERT",
-  ["ic"] = "INSERT",
-  ["R"] = "REPLACE",
-  ["Rv"] = "VISUAL REPLACE",
-  ["c"] = "COMMAND",
-  ["cv"] = "VIM EX",
-  ["ce"] = "EX",
-  ["r"] = "PROMPT",
-  ["rm"] = "MOAR",
-  ["r?"] = "CONFIRM",
-  ["!"] = "SHELL",
-  ["t"] = "TERMINAL",
+	["n"] = "NORMAL",
+	["no"] = "NORMAL",
+	["v"] = "VISUAL",
+	["V"] = "VISUAL LINE",
+	["␖"] = "VISUAL BLOCK",
+	["s"] = "SELECT",
+	["S"] = "SELECT LINE",
+	["␓"] = "SELECT BLOCK",
+	["i"] = "INSERT",
+	["ic"] = "INSERT",
+	["R"] = "REPLACE",
+	["Rv"] = "VISUAL REPLACE",
+	["c"] = "COMMAND",
+	["cv"] = "VIM EX",
+	["ce"] = "EX",
+	["r"] = "PROMPT",
+	["rm"] = "MOAR",
+	["r?"] = "CONFIRM",
+	["!"] = "SHELL",
+	["t"] = "TERMINAL",
 }
 local function mode()
-  local current_mode = vim.api.nvim_get_mode().mode
-  return string.format("%s", modes[current_mode]):upper()
+	local current_mode = vim.api.nvim_get_mode().mode
+	return string.format("%s", modes[current_mode]):upper()
 end
 
 -- get the normal colors
 local function get_color(group, attr)
-    return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID(group)), attr)
+	return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID(group)), attr)
 end
 local fg_color = get_color("Normal", "fg#")
 
 -- statusline colors
-vim.cmd("highlight StatusLine guibg=NONE".." guifg="..fg_color) -- active statusline style
-vim.cmd("highlight StatusLineNC guibg=NONE".." guifg=".. fg_color) -- inactive statusline style
-vim.cmd("highlight StatusLineInfo guifg=" .. fg_color ) -- inactive statusline style
-vim.cmd("highlight StatusLineBold guifg=".. fg_color.. " gui=bold") -- inactive statusline style
+vim.cmd("highlight StatusLine guibg=NONE" .. " guifg=" .. fg_color)   -- active statusline style
+vim.cmd("highlight StatusLineNC guibg=NONE" .. " guifg=" .. fg_color) -- inactive statusline style
+vim.cmd("highlight StatusLineInfo guifg=" .. fg_color)                -- inactive statusline style
+vim.cmd("highlight StatusLineBold guifg=" .. fg_color .. " gui=bold") -- inactive statusline style
 
-
-vim.o.laststatus=2
-vim.o.showmode=false
+vim.o.laststatus = 2
+vim.o.showmode = false
 vim.cmd("set fillchars=stlnc:-,stl:-")
-vim.api.nvim_create_autocmd({"ModeChanged", "BufEnter", "WinEnter"}, {
-  callback=function()
-    vim.opt_local.statusline=""
-    .."-"
-    .."%#StatusLineBold#"
-    .."%F" -- show file type
-    .."%#StatusLineInfo#"
-    .."-"
-    .."%N" -- buffer number
-    .."-"
-    ..mode()
-    .."%#StatusLine#"
-    .."-"
-    .."%=" -- move over to other edge of status line
-    .."%#StatusLineInfo#"
-    .."-%l/%L-%c-"
-  end
+vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter" }, {
+	callback = function()
+		vim.opt_local.statusline = ""
+			.. "-"
+			.. "%#StatusLineBold#"
+			.. "%F" -- show file type
+			.. "%#StatusLineInfo#"
+			.. "-"
+			.. "%N" -- buffer number
+			.. "-"
+			.. mode()
+			.. "%#StatusLine#"
+			.. "-"
+			.. "%=" -- move over to other edge of status line
+			.. "%#StatusLineInfo#"
+			.. "-%l/%L-%c-"
+	end,
 })
 
-vim.api.nvim_create_autocmd({"BufLeave", "WinLeave"}, {
-  callback=function()
-    vim.opt_local.statusline=""
-    .."-"
-    .."%F" -- show file type
-    .." "
-    .."%N" -- buffer number
-    .."-"
-  end
+vim.api.nvim_create_autocmd({ "BufLeave", "WinLeave" }, {
+	callback = function()
+		vim.opt_local.statusline = ""
+			.. "-"
+			.. "%F" -- show file type
+			.. " "
+			.. "%N" -- buffer number
+			.. "-"
+	end,
 })
 
 -- make signcolumn have same bg as usual
 local function make_default_bg(group)
-  local maybe_fg_color = get_color(group, "fg#")
-  if #maybe_fg_color > 0 then
-    vim.cmd("highlight " .. group .. " guibg=NONE".. " guifg=" .. maybe_fg_color)
-  else
-    vim.cmd("highlight " .. group .. " guibg=NONE")
-  end
+	local maybe_fg_color = get_color(group, "fg#")
+	if #maybe_fg_color > 0 then
+		vim.cmd("highlight " .. group .. " guibg=NONE" .. " guifg=" .. maybe_fg_color)
+	else
+		vim.cmd("highlight " .. group .. " guibg=NONE")
+	end
 end
 make_default_bg("SignColumn")
 make_default_bg("DiagnosticSignError")
