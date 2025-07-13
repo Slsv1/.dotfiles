@@ -4,9 +4,9 @@
 
 ---@class cfg
 local cfg = {
-	colorscheme = "gruvbox",
 	max_scroll_off = 10,
 	plugins = {
+		colorscheme = "gruvbox",
 		tree_sitter_languages = {
 			"bash",
 			"c",
@@ -28,9 +28,9 @@ local cfg = {
 			"clangd",
 			"cmake",
 		},
-		diagnostics = true,
 		gray_out_unnecesary = false,
 	},
+	diagnostics = true,
 	tab_config = {
 		per_language_config = {
 			python = {indent = 4, spaces = true},
@@ -78,7 +78,7 @@ if cfg.keybinds then
 		vim.print("buffer formatted")
 	end)
 
-	if cfg.lsp.diagnostics then
+	if cfg.diagnostics then
 		vim.keymap.set("n", cfg.keybinds.diagnostic_mode_toggle, function()
 			vim.diagnostic.config({
 				virtual_lines = not vim.diagnostic.config().virtual_lines,
@@ -90,7 +90,7 @@ end
 
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
 -- vim.keymap.set("n", "<C-f>", "<C-f>zz")
-if cfg.lsp.diagnostics then
+if cfg.diagnostics then
 	vim.diagnostic.config({
 		virtual_lines = false,
 		virtual_text = true,
@@ -268,17 +268,6 @@ if cfg.plugins then
 			end,
 		},
 		{
-			"neovim/nvim-lspconfig",
-			dependencies = {
-				{
-					"mason-org/mason.nvim",
-					opts = {
-						ensure_installed = cfg.lsp.active_servers,
-					},
-				},
-			},
-		},
-		{
 			"folke/lazydev.nvim",
 			ft = "lua", -- only load on lua files
 			opts = {
@@ -349,6 +338,20 @@ if cfg.plugins then
 		},
 	}
 
+	if cfg.lsp then
+		table.insert(plugins, {
+			"neovim/nvim-lspconfig",
+			dependencies = {
+				{
+					"mason-org/mason.nvim",
+					opts = {
+						ensure_installed = cfg.lsp.active_servers,
+					},
+				},
+			},
+		})
+	end
+
 	require("lazy").setup({
 		-- Configure any other settings here. See the documentation for more details.
 		-- colorscheme that will be used when installing plugins.
@@ -357,24 +360,24 @@ if cfg.plugins then
 		-- automatically check for plugin updates
 		checker = { enabled = true },
 	})
+	if cfg.plugins.colorscheme then
+		vim.cmd("colorscheme " .. cfg.plugins.colorscheme)
+	end
 end
 
 if cfg.lsp then
 	vim.lsp.enable(cfg.lsp.active_servers)
+	-- disable grayed out functions when unused
+	if not cfg.gray_out_unnecesary then
+		vim.cmd([[highlight DiagnosticUnnecessary guifg=NONE]])
+	end
 end
 
 -- Visuals
 ----------
 
 
-if cfg.colorscheme then
-	vim.cmd("colorscheme " .. cfg.colorscheme)
-end
 
--- disable grayed out functions when unused
-if not cfg.lsp.gray_out_unnecesary then
-	vim.cmd([[highlight DiagnosticUnnecessary guifg=NONE]])
-end
 
 local function get_color(group, attr)
 	return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID(group)), attr)
@@ -461,7 +464,7 @@ local function make_default_bg(group)
 	end
 end
 -- make signcolumn have same bg as usual
-if cfg.sign_column.flat then
+if cfg.sign_column and cfg.sign_column.flat then
 	make_default_bg("SignColumn")
 	make_default_bg("DiagnosticSignError")
 	make_default_bg("DiagnosticSignWarn")
