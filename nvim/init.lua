@@ -22,15 +22,18 @@ local cfg = {
 		},
 	},
 	lsp = {
+		---@type string[]
+		---to get lsp names it is recommended to check out https://github.com/neovim/nvim-lspconfig/tree/master/lsp
 		active_servers = {
 			"lua_ls",
 			"pyright",
 			"clangd",
 			"cmake",
+			"bashls",
 		},
 		gray_out_unnecesary = false,
+		diagnostics = true,
 	},
-	diagnostics = true,
 	tab_config = {
 		per_language_config = {
 			python = {indent = 4, spaces = true},
@@ -50,9 +53,10 @@ local cfg = {
 		center_when_jumping = true,
 		leader = " ",
 		normal_mode = "kj",
-		format = "g=",
+		format = "<leader>f",
 		lsp_go_definition = "gd",
 		diagnostic_mode_toggle = "<leader>d",
+		use_tab_for_completion = true
 	},
 	misc = true,
 }
@@ -73,29 +77,25 @@ if cfg.keybinds then
 	vim.keymap.set("n", cfg.keybinds.lsp_go_definition, "<C-]>")
 	vim.keymap.set("i", cfg.keybinds.normal_mode, "<cmd>nohlsearch<CR><Esc>", options)
 
-	vim.keymap.set("n", cfg.keybinds.format, function()
-		vim.lsp.buf.format()
-		vim.print("buffer formatted")
-	end)
+	if cfg.lsp then
+		vim.keymap.set("n", cfg.keybinds.format, function()
+			vim.lsp.buf.format()
+			vim.print("buffer formatted")
+		end)
 
-	if cfg.diagnostics then
-		vim.keymap.set("n", cfg.keybinds.diagnostic_mode_toggle, function()
-			vim.diagnostic.config({
-				virtual_lines = not vim.diagnostic.config().virtual_lines,
-				virtual_text = not vim.diagnostic.config().virtual_text,
-			})
-		end, { desc = "Toggle diagnostic virtual lines and virtual text" })
+		if cfg.lsp.diagnostics then
+			vim.keymap.set("n", cfg.keybinds.diagnostic_mode_toggle, function()
+				vim.diagnostic.config({
+					virtual_lines = not vim.diagnostic.config().virtual_lines,
+					virtual_text = not vim.diagnostic.config().virtual_text,
+				})
+			end, { desc = "Toggle diagnostic virtual lines and virtual text" })
+		end
 	end
 end
 
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
 -- vim.keymap.set("n", "<C-f>", "<C-f>zz")
-if cfg.diagnostics then
-	vim.diagnostic.config({
-		virtual_lines = false,
-		virtual_text = true,
-	})
-end
 
 if cfg.use_system_clipboard then
 	vim.o.clipboard = vim.o.clipboard .. "unnamedplus"
@@ -119,9 +119,6 @@ if cfg.misc then
 	vim.o.inccommand = "split"
 end
 
-if cfg.sign_column then
-	vim.o.signcolumn = "yes"
-end
 
 if cfg.fancy_whitespace then
 	vim.opt.list = true
@@ -190,21 +187,10 @@ if cfg.plugins then
 			"nvim-treesitter/nvim-treesitter",
 			build = ":TSUpdate",
 			main = "nvim-treesitter.configs", -- Sets main module to use for opts
+			priority = 126,
 			-- [[ Configure Treesitter ]] See `:help nvim-treesitter`
 			opts = {
-				ensure_installed = {
-					"bash",
-					"c",
-					"diff",
-					"html",
-					"lua",
-					"luadoc",
-					"markdown",
-					"markdown_inline",
-					"query",
-					"vim",
-					"vimdoc",
-				},
+				ensure_installed = cfg.plugins.tree_sitter_languages,
 				-- Autoinstall languages that are not installed
 				auto_install = true,
 				highlight = {
@@ -305,7 +291,7 @@ if cfg.plugins then
 				-- C-k: Toggle signature help (if signature.enabled = true)
 				--
 				-- See :h blink-cmp-config-keymap for defining your own keymap
-				keymap = { preset = "default" },
+				keymap = { preset = cfg.keybinds.use_tab_for_completion and "super-tab" or "default" },
 
 				appearance = {
 					-- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
@@ -368,7 +354,13 @@ end
 if cfg.lsp then
 	vim.lsp.enable(cfg.lsp.active_servers)
 	-- disable grayed out functions when unused
-	if not cfg.gray_out_unnecesary then
+	if cfg.lsp.diagnostics then
+		vim.diagnostic.config({
+			virtual_lines = false,
+			virtual_text = true,
+		})
+	end
+	if not cfg.lsp.gray_out_unnecesary then
 		vim.cmd([[highlight DiagnosticUnnecessary guifg=NONE]])
 	end
 end
@@ -464,13 +456,16 @@ local function make_default_bg(group)
 	end
 end
 -- make signcolumn have same bg as usual
-if cfg.sign_column and cfg.sign_column.flat then
-	make_default_bg("SignColumn")
-	make_default_bg("DiagnosticSignError")
-	make_default_bg("DiagnosticSignWarn")
-	make_default_bg("DiagnosticSignInfo")
-	make_default_bg("DiagnosticSignHint")
-	make_default_bg("DiagnosticSignOk")
+if cfg.sign_column then
+	vim.o.signcolumn = "yes"
+	if cfg.sign_column.flat then
+		make_default_bg("SignColumn")
+		make_default_bg("DiagnosticSignError")
+		make_default_bg("DiagnosticSignWarn")
+		make_default_bg("DiagnosticSignInfo")
+		make_default_bg("DiagnosticSignHint")
+		make_default_bg("DiagnosticSignOk")
+	end
 end
 
 if cfg.cursor_line then
