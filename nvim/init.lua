@@ -56,7 +56,8 @@ local cfg = {
 		format = "<leader>f",
 		lsp_go_definition = "gd",
 		diagnostic_mode_toggle = "<leader>d",
-		use_tab_for_completion = true
+		use_tab_for_completion = true,
+		open_file_explorer = "-"
 	},
 	misc = true,
 }
@@ -251,6 +252,7 @@ if cfg.plugins then
 			lazy = false,
 			config = function()
 				require("oil").setup()
+				vim.keymap.set("n", cfg.keybinds.open_file_explorer, "<CMD>Oil<CR>", { desc = "Open parent directory" })
 			end,
 		},
 		{

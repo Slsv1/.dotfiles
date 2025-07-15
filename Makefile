@@ -3,6 +3,7 @@ all: dev games
 core:
 	sudo apt update
 	sudo apt install flatpak
+.PHONY = core
 
 dev: core dev_packages dev_symlinks dev_cpp
 .PHONY = dev
