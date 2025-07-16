@@ -1,7 +1,6 @@
 -- config :yum:
 -- enable logging
 
-
 ---@class cfg
 local cfg = {
 	max_scroll_off = 10,
@@ -110,6 +109,7 @@ end
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 -- vim.api.nvim_get_hl(0, "#Normal#")
 if cfg.misc then
+	vim.o.winborder = "solid"
 	vim.o.ignorecase = true
 	vim.o.smartcase = true
 
@@ -120,11 +120,11 @@ if cfg.misc then
 	vim.o.inccommand = "split"
 end
 
-
 if cfg.fancy_whitespace then
 	vim.opt.list = true
 	vim.opt.listchars = { tab = "» ", trail = "·", nbsp = "␣" }
 end
+
 
 -- Minimal number of screen lines to keep above and below the cursor.
 if cfg.max_scroll_off ~= nil then
@@ -149,6 +149,7 @@ if cfg.tab_config then
 			vim.api.nvim_create_autocmd("FileType", {
 				pattern = pattern,
 				callback = function()
+					vim.opt_local.expandtab = false
 					vim.opt_local.tabstop = length
 					vim.opt_local.shiftwidth = length
 				end,
@@ -304,9 +305,12 @@ if cfg.plugins then
 				-- (Default) Only show the documentation popup when manually triggered
 				completion = {
 					menu = {
-						border = "padded",
+						border = "none",
 					},
-					documentation = { auto_show = true },
+					documentation = {
+						window = {border = "solid",},
+						auto_show = true
+					},
 				},
 
 				-- Default list of enabled providers defined so that you can extend it
@@ -325,6 +329,7 @@ if cfg.plugins then
 			opts_extend = { "sources.default" },
 		},
 	}
+	
 
 	if cfg.lsp then
 		table.insert(plugins, {
@@ -406,14 +411,22 @@ if cfg.custom_status_bar then
 		return string.format("%s", modes[current_mode]):upper()
 	end
 
+	local function tabs_or_spaces()
+		if vim.o.expandtab then
+			return "Spaces"
+		else
+			return "Tabs"
+		end
+	end
+
 	-- get the normal colors
 	local fg_color = get_color("Normal", "fg#")
 
 	-- statusline colors
-	vim.cmd("highlight StatusLine guibg=NONE" .. " guifg=" .. fg_color)   -- active statusline style
-	vim.cmd("highlight StatusLineNC guibg=NONE" .. " guifg=" .. fg_color) -- inactive statusline style
-	vim.cmd("highlight StatusLineInfo guifg=" .. fg_color)                -- inactive statusline style
-	vim.cmd("highlight StatusLineBold guifg=" .. fg_color .. " gui=bold") -- inactive statusline style
+	-- vim.cmd("highlight StatusLine guibg=NONE" .. " guifg=" .. fg_color)   -- active statusline style
+	-- vim.cmd("highlight StatusLineNC guibg=NONE" .. " guifg=" .. fg_color) -- inactive statusline style
+	-- vim.cmd("highlight StatusLineInfo guifg=" .. fg_color)                -- inactive statusline style
+	vim.cmd("highlight StatusLineBold gui=bold") -- inactive statusline style
 
 	vim.o.laststatus = 2
 	vim.o.showmode = false
@@ -421,30 +434,32 @@ if cfg.custom_status_bar then
 	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter" }, {
 		callback = function()
 			vim.opt_local.statusline = ""
-				.. "-"
+				.. " "
 				.. "%#StatusLineBold#"
 				.. "%F" -- show file type
-				.. "%#StatusLineInfo#"
-				.. "-"
-				.. "%N" -- buffer number
-				.. "-"
-				.. mode()
 				.. "%#StatusLine#"
-				.. "-"
+				.. " "
+				.. "[%N]" -- buffer number
+				.. " "
+				.. mode()
+				.. " "
 				.. "%=" -- move over to other edge of status line
-				.. "%#StatusLineInfo#"
-				.. "-%l/%L-%c-"
+				.. " "
+				.. tabs_or_spaces()
+				.. " - %l:%c - %L lines "
 		end,
 	})
 
 	vim.api.nvim_create_autocmd({ "BufLeave", "WinLeave" }, {
 		callback = function()
 			vim.opt_local.statusline = ""
-				.. "-"
+				.. " "
 				.. "%F" -- show file type
 				.. " "
 				.. "%N" -- buffer number
-				.. "-"
+				.. " "
+				.. "%="
+				.. " %l Lines "
 		end,
 	})
 end
