@@ -55,13 +55,92 @@ local cfg = {
 		format = "<leader>f",
 		lsp_go_definition = "gd",
 		diagnostic_mode_toggle = "<leader>d",
-		use_tab_for_completion = true,
-		open_file_explorer = "-"
+		use_enter_for_completion = true,
+		open_file_explorer = "-",
+		toggle_wrapped =  "<leader>w",
 	},
 	misc = true,
 }
 
--- vim.lsp.set_log_level("debug")
+-- utility functions for displaying diagnostics correctly
+-- (shamelessly stolen from https://github.com/joe-p/kickstart.nvim/blob/4f756cf63ec2d4eea293918e086096ff984eebc9/lua/joe-p/diagnostic.lua)
+
+-- Get the window id for a buffer
+--- @param bufnr integer
+local function buf_to_win(bufnr)
+	local current_win = vim.fn.win_getid()
+
+	-- Check if current window has the buffer
+	if vim.fn.winbufnr(current_win) == bufnr then
+		return current_win
+	end
+
+	-- Otherwise, find a visible window with this buffer
+	local win_ids = vim.fn.win_findbuf(bufnr)
+	local current_tabpage = vim.fn.tabpagenr()
+
+	for _, win_id in ipairs(win_ids) do
+		if vim.fn.win_id2tabwin(win_id)[1] == current_tabpage then
+			return win_id
+		end
+	end
+
+	return current_win
+end
+
+-- Split a string into multiple lines, each no longer than max_width
+-- The split will only occur on spaces to preserve readability
+--- @param str string
+--- @param max_width integer
+local function split_line(str, max_width)
+	if #str <= max_width then
+		return { str }
+	end
+
+	local lines = {}
+	local current_line = ''
+
+	for word in string.gmatch(str, '%S+') do
+		-- If adding this word would exceed max_width
+		if #current_line + #word + 1 > max_width then
+			-- Add the current line to our results
+			table.insert(lines, current_line)
+			current_line = word
+		else
+			-- Add word to the current line with a space if needed
+			if current_line ~= '' then
+				current_line = current_line .. ' ' .. word
+			else
+				current_line = word
+			end
+		end
+	end
+
+	-- Don't forget the last line
+	if current_line ~= '' then
+		table.insert(lines, current_line)
+	end
+
+	return lines
+end
+
+---@param diagnostic vim.Diagnostic
+local function virtual_lines_format(diagnostic)
+	local win = buf_to_win(diagnostic.bufnr)
+	local sign_column_width = vim.fn.getwininfo(win)[1].textoff
+	local text_area_width = vim.api.nvim_win_get_width(win) - sign_column_width
+	local center_width = 5
+	local left_width = 1
+
+	---@type string[]
+	local lines = {}
+	for msg_line in diagnostic.message:gmatch '([^\n]+)' do
+		local max_width = text_area_width - diagnostic.col - center_width - left_width
+		vim.list_extend(lines, split_line(msg_line, max_width))
+	end
+
+	return table.concat(lines, '\n')
+end
 
 if cfg.keybinds then
 	-- [[ keybinds ]]
@@ -85,13 +164,24 @@ if cfg.keybinds then
 
 		if cfg.lsp.diagnostics then
 			vim.keymap.set("n", cfg.keybinds.diagnostic_mode_toggle, function()
+				local virtual_lines_enabled
+				if not vim.diagnostic.config().virtual_lines then
+					virtual_lines_enabled = { format = virtual_lines_format}
+				else
+					virtual_lines_enabled = false
+				end
 				vim.diagnostic.config({
-					virtual_lines = not vim.diagnostic.config().virtual_lines,
+					virtual_lines = virtual_lines_enabled,
 					virtual_text = not vim.diagnostic.config().virtual_text,
 				})
-			end, { desc = "Toggle diagnostic virtual lines and virtual text" })
+				return "zz"
+			end, { expr = true, desc = "Toggle diagnostic virtual lines and virtual text" })
 		end
 	end
+	vim.keymap.set("n", cfg.keybinds.toggle_wrapped, function()
+		vim.print("hej")
+		vim.o.wrap = not vim.o.wrap
+	end)
 end
 
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
@@ -118,6 +208,7 @@ if cfg.misc then
 	vim.o.breakindent = true
 	-- Preview substitutions live, as you type!
 	vim.o.inccommand = "split"
+	vim.o.wrap = false
 end
 
 if cfg.fancy_whitespace then
@@ -245,8 +336,11 @@ if cfg.plugins then
 			"stevearc/oil.nvim",
 			---@module 'oil'
 			---@type oil.SetupOpts
-			opts = {},
-			-- Optional dependencies
+			opts = {
+				view_options = {
+					show_hidden = true
+				}
+			}, -- Optional dependencies
 			-- dependencies = { { "echasnovski/mini.icons", opts = {} } },
 			dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
 			-- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
@@ -294,7 +388,7 @@ if cfg.plugins then
 				-- C-k: Toggle signature help (if signature.enabled = true)
 				--
 				-- See :h blink-cmp-config-keymap for defining your own keymap
-				keymap = { preset = cfg.keybinds.use_tab_for_completion and "super-tab" or "default" },
+				keymap = { preset = cfg.keybinds.use_enter_for_completion and "enter" or "default" },
 
 				appearance = {
 					-- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
@@ -329,7 +423,6 @@ if cfg.plugins then
 			opts_extend = { "sources.default" },
 		},
 	}
-	
 
 	if cfg.lsp then
 		table.insert(plugins, {
@@ -358,14 +451,29 @@ if cfg.plugins then
 	end
 end
 
+
 if cfg.lsp then
 	vim.lsp.enable(cfg.lsp.active_servers)
 	-- disable grayed out functions when unused
 	if cfg.lsp.diagnostics then
-		vim.diagnostic.config({
-			virtual_lines = false,
+		vim.diagnostic.config {
 			virtual_text = true,
+			virtual_lines = false,
+			severity_sort = { reverse = false },
+		}
+
+		-- Re-render diagnostics when the window is resized
+
+		vim.api.nvim_create_autocmd('VimResized', {
+			callback = function()
+				vim.diagnostic.hide()
+				vim.diagnostic.show()
+			end,
 		})
+		-- vim.diagnostic.config({
+		-- 	virtual_lines = false,
+		-- 	virtual_text = true,
+		-- })
 	end
 	if not cfg.lsp.gray_out_unnecesary then
 		vim.cmd([[highlight DiagnosticUnnecessary guifg=NONE]])
@@ -419,6 +527,19 @@ if cfg.custom_status_bar then
 		end
 	end
 
+	local function lsp_client()
+		local client = vim.lsp.get_clients({bufnr = vim.api.nvim_get_current_buf()})[1]
+		if client ~= nil then
+			return " " ..client.name
+		end
+
+		-- local status = vim.lsp.status()
+		-- if status then
+		-- 	return status
+		-- end
+		return ""
+	end
+
 	-- get the normal colors
 	local fg_color = get_color("Normal", "fg#")
 
@@ -426,27 +547,21 @@ if cfg.custom_status_bar then
 	-- vim.cmd("highlight StatusLine guibg=NONE" .. " guifg=" .. fg_color)   -- active statusline style
 	-- vim.cmd("highlight StatusLineNC guibg=NONE" .. " guifg=" .. fg_color) -- inactive statusline style
 	-- vim.cmd("highlight StatusLineInfo guifg=" .. fg_color)                -- inactive statusline style
-	vim.cmd("highlight StatusLineBold gui=bold") -- inactive statusline style
+	-- vim.cmd("highlight StatusLineBold guifg=") -- inactive statusline style
 
 	vim.o.laststatus = 2
 	vim.o.showmode = false
-	vim.cmd("set fillchars=stlnc:-,stl:-")
-	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter" }, {
+	vim.cmd("set fillchars=stl:-")
+	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter", "LspAttach" }, {
 		callback = function()
 			vim.opt_local.statusline = ""
-				.. " "
-				.. "%#StatusLineBold#"
 				.. "%F" -- show file type
-				.. "%#StatusLine#"
-				.. " "
-				.. "[%N]" -- buffer number
 				.. " "
 				.. mode()
 				.. " "
 				.. "%=" -- move over to other edge of status line
-				.. " "
-				.. tabs_or_spaces()
-				.. " - %l:%c - %L lines "
+				.. lsp_client()
+				.. " [%l/%L]"
 		end,
 	})
 
@@ -456,10 +571,8 @@ if cfg.custom_status_bar then
 				.. " "
 				.. "%F" -- show file type
 				.. " "
-				.. "%N" -- buffer number
-				.. " "
 				.. "%="
-				.. " %l Lines "
+				.. " [%L]"
 		end,
 	})
 end
