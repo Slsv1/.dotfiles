@@ -1,6 +1,7 @@
 -- config :yum:
 -- enable logging
 
+
 ---@class cfg
 local cfg = {
 	max_scroll_off = 10,
@@ -54,8 +55,9 @@ local cfg = {
 		normal_mode = "kj",
 		format = "<leader>f",
 		lsp_go_definition = "gd",
+		select_pasted = "gp",
 		diagnostic_mode_toggle = "<leader>d",
-		use_enter_for_completion = true,
+		use_enter_for_completion = false,
 		open_file_explorer = "-",
 		toggle_wrapped =  "<leader>w",
 	},
@@ -182,6 +184,7 @@ if cfg.keybinds then
 		vim.print("hej")
 		vim.o.wrap = not vim.o.wrap
 	end)
+	vim.keymap.set({"n", "v"}, cfg.keybinds.select_pasted, "`[v`]")
 end
 
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
@@ -551,13 +554,14 @@ if cfg.custom_status_bar then
 
 	vim.o.laststatus = 2
 	vim.o.showmode = false
-	vim.cmd("set fillchars=stl:-")
+	-- vim.cmd("set fillchars=stl:-")
 	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter", "LspAttach" }, {
 		callback = function()
 			vim.opt_local.statusline = ""
-				.. "%F" -- show file type
 				.. " "
 				.. mode()
+				.. " %F" -- show file type
+				.. " %m%r"
 				.. " "
 				.. "%=" -- move over to other edge of status line
 				.. lsp_client()
@@ -569,10 +573,10 @@ if cfg.custom_status_bar then
 		callback = function()
 			vim.opt_local.statusline = ""
 				.. " "
-				.. "%F" -- show file type
+				.. "%F %m%r" -- show file type
 				.. " "
 				.. "%="
-				.. " [%L]"
+				.. " [%l/%L]"
 		end,
 	})
 end
