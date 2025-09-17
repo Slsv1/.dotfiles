@@ -3,14 +3,15 @@ all: dev games audio common
 
 core:
 	sudo apt update
-	sudo apt install flatpak
+	sudo apt install flatpak gcc
+	flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 .PHONY = core
 
 dev: core dev_packages dev_symlinks dev_cpp
 .PHONY = dev
 
 dev_symlinks: dev_packages
-	mkdir $(HOME)/.config
+	mkdir -p $(HOME)/.config
 	ln -sfv $(HOME)/.dotfiles/nvim $(HOME)/.config/nvim
 	ln -sfv $(HOME)/.dotfiles/kitty $(HOME)/.config/kitty
 	ln -sfv $(HOME)/.dotfiles/.tmux.conf $(HOME)/.tmux.conf
@@ -27,7 +28,7 @@ dev_cpp: core
 .PHONY = dev_cpp
 
 audio: core
-	sudo apt install qpwgraph
+	sudo apt install qpwgraph pipewire-jack pipewire-pulse
 .PHONY = audio
 
 games: core

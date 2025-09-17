@@ -30,6 +30,8 @@ local cfg = {
 			"clangd",
 			"cmake",
 			"bashls",
+			"cssls",
+			"html"
 		},
 		gray_out_unnecesary = false,
 		diagnostics = true,
@@ -56,10 +58,13 @@ local cfg = {
 		format = "<leader>f",
 		lsp_go_definition = "gd",
 		select_pasted = "gp",
-		diagnostic_mode_toggle = "<leader>d",
 		use_enter_for_completion = false,
 		open_file_explorer = "-",
+		diagnostic_disable = "<leader>dd",
+		diagnostic_enable_inline = "<leader>dt",
+		diagnostic_enable_virtual_lines_wrapped = "<leader>dl",
 		toggle_wrapped =  "<leader>w",
+		-- diagnostic_mode_toggle = "<leader>d",
 	},
 	misc = true,
 }
@@ -165,27 +170,33 @@ if cfg.keybinds then
 		end)
 
 		if cfg.lsp.diagnostics then
-			vim.keymap.set("n", cfg.keybinds.diagnostic_mode_toggle, function()
-				local virtual_lines_enabled
-				if not vim.diagnostic.config().virtual_lines then
-					virtual_lines_enabled = { format = virtual_lines_format}
-				else
-					virtual_lines_enabled = false
-				end
+			vim.keymap.set("n", cfg.keybinds.diagnostic_disable, function()
+				vim.diagnostic.enable(false)
+			end)
+			vim.keymap.set("n", cfg.keybinds.diagnostic_enable_inline, function()
+				vim.diagnostic.enable(true)
 				vim.diagnostic.config({
-					virtual_lines = virtual_lines_enabled,
-					virtual_text = not vim.diagnostic.config().virtual_text,
+					virtual_lines = false,
+					virtual_text = true,
+				})
+
+			end)
+			vim.keymap.set("n", cfg.keybinds.diagnostic_enable_virtual_lines_wrapped, function()
+				vim.diagnostic.enable(true)
+				vim.diagnostic.config({
+					virtual_lines = {format=virtual_lines_format},
+					virtual_text = false,
 				})
 				return "zz"
-			end, { expr = true, desc = "Toggle diagnostic virtual lines and virtual text" })
+			end, {expr = true})
 		end
 	end
 	vim.keymap.set("n", cfg.keybinds.toggle_wrapped, function()
-		vim.print("hej")
 		vim.o.wrap = not vim.o.wrap
 	end)
 	vim.keymap.set({"n", "v"}, cfg.keybinds.select_pasted, "`[v`]")
 end
+
 
 -- vim.keymap.set("n", "<C-b>", "<C-b>zz")
 -- vim.keymap.set("n", "<C-f>", "<C-f>zz")
@@ -530,10 +541,22 @@ if cfg.custom_status_bar then
 		end
 	end
 
-	local function lsp_client()
+	local function diagnostic_amount(severity)
+		return #vim.diagnostic.get(0, { severity = severity })
+	end
+
+	local function lsp_info()
 		local client = vim.lsp.get_clients({bufnr = vim.api.nvim_get_current_buf()})[1]
 		if client ~= nil then
-			return " " ..client.name
+			return " "
+				.. client.name
+				.. " "
+				.. "%#DiagnosticSignError#" .. diagnostic_amount("Error") .. "E"
+				.. "%#DiagnosticSignWarn#" .. diagnostic_amount("Warn") .. "W"
+				.. "%#DiagnosticSignHint#" .. diagnostic_amount("Hint") .. "H"
+				.. "%#StatusLine#"
+		else
+			return " no lsp"
 		end
 
 		-- local status = vim.lsp.status()
@@ -555,17 +578,17 @@ if cfg.custom_status_bar then
 	vim.o.laststatus = 2
 	vim.o.showmode = false
 	-- vim.cmd("set fillchars=stl:-")
-	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter", "LspAttach" }, {
+	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter", "LspAttach", "CursorHold" }, {
 		callback = function()
 			vim.opt_local.statusline = ""
 				.. " "
 				.. mode()
 				.. " %F" -- show file type
-				.. " %m%r"
-				.. " "
+				.. " %m%r" -- flags
 				.. "%=" -- move over to other edge of status line
-				.. lsp_client()
-				.. " [%l/%L]"
+				.. lsp_info()
+				.. " "
+				.. "[%l/%L]"
 		end,
 	})
 
