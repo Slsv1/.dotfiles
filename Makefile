@@ -3,7 +3,7 @@ all: dev games audio common
 
 core:
 	sudo apt update
-	sudo apt install flatpak gcc
+	sudo apt install flatpak gcc npm
 	flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 .PHONY = core
 
