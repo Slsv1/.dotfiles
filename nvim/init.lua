@@ -19,6 +19,8 @@ local cfg = {
 			"query",
 			"vim",
 			"vimdoc",
+			"rst",
+			"json"
 		},
 	},
 	lsp = {
@@ -31,23 +33,25 @@ local cfg = {
 			"cmake",
 			"bashls",
 			"cssls",
-			"html"
+			"html",
+			"rstcheck",
 		},
 		gray_out_unnecesary = false,
 		diagnostics = true,
 	},
 	tab_config = {
 		per_language_config = {
-			python = {indent = 4, spaces = true},
-			lua = {indent = 4, spaces = false},
-			c = {indent = 4, spaces = true},
-			cpp = {indent = 4, spaces = true},
+			python = { indent = 4, spaces = true },
+			lua = { indent = 4, spaces = false },
+			c = { indent = 4, spaces = true },
+			cpp = { indent = 4, spaces = true },
 		},
 	},
 	sign_column = {
 		flat = true
 	},
 	cursor_line = true,
+	use_swap_files = false,
 	custom_status_bar = true,
 	use_system_clipboard = true,
 	fancy_whitespace = true,
@@ -58,16 +62,27 @@ local cfg = {
 		format = "<leader>f",
 		lsp_go_definition = "gd",
 		select_pasted = "gp",
-		use_enter_for_completion = false,
 		open_file_explorer = "-",
+
+		next_buffer = "<leader>t",
+		prev_buffer = "<leader>T",
+
+		-- diagnostics
 		diagnostic_disable = "<leader>dd",
 		diagnostic_enable_inline = "<leader>dt",
 		diagnostic_enable_virtual_lines_wrapped = "<leader>dl",
-		toggle_wrapped =  "<leader>w",
+
+		toggle_wrapped = "<leader>w",
+		color_column = "<leader>cc",
 		-- diagnostic_mode_toggle = "<leader>d",
 	},
 	misc = true,
 }
+
+vim.o.swapfile = cfg.use_swap_files
+
+-- defaults
+vim.o.colorcolumn = "80"
 
 -- utility functions for displaying diagnostics correctly
 -- (shamelessly stolen from https://github.com/joe-p/kickstart.nvim/blob/4f756cf63ec2d4eea293918e086096ff984eebc9/lua/joe-p/diagnostic.lua)
@@ -156,10 +171,19 @@ if cfg.keybinds then
 
 	local options = { noremap = true }
 
+	vim.keymap.set("n", cfg.keybinds.color_column, function()
+		if vim.o.colorcolumn == "80" then
+			vim.o.colorcolumn = "0"
+		else
+			vim.o.colorcolumn = "80"
+		end
+	end)
 	if cfg.keybinds.center_when_jumping then
 		vim.keymap.set("n", "<C-u>", "<C-u>zz")
 		vim.keymap.set("n", "<C-d>", "<C-d>zz")
 	end
+	vim.keymap.set({"n" }, cfg.keybinds.next_buffer, ":bnext<CR>")
+	vim.keymap.set({"n" }, cfg.keybinds.prev_buffer, ":bprev<CR>")
 	vim.keymap.set("n", cfg.keybinds.lsp_go_definition, "<C-]>")
 	vim.keymap.set("i", cfg.keybinds.normal_mode, "<cmd>nohlsearch<CR><Esc>", options)
 
@@ -179,22 +203,21 @@ if cfg.keybinds then
 					virtual_lines = false,
 					virtual_text = true,
 				})
-
 			end)
 			vim.keymap.set("n", cfg.keybinds.diagnostic_enable_virtual_lines_wrapped, function()
 				vim.diagnostic.enable(true)
 				vim.diagnostic.config({
-					virtual_lines = {format=virtual_lines_format},
+					virtual_lines = { format = virtual_lines_format },
 					virtual_text = false,
 				})
 				return "zz"
-			end, {expr = true})
+			end, { expr = true })
 		end
 	end
 	vim.keymap.set("n", cfg.keybinds.toggle_wrapped, function()
 		vim.o.wrap = not vim.o.wrap
 	end)
-	vim.keymap.set({"n", "v"}, cfg.keybinds.select_pasted, "`[v`]")
+	vim.keymap.set({ "n", "v" }, cfg.keybinds.select_pasted, "`[v`]")
 end
 
 
@@ -319,7 +342,7 @@ if cfg.plugins then
 		{
 			"ellisonleao/gruvbox.nvim",
 			priority = 1000,
-			config = function ()
+			config = function()
 				require("gruvbox").setup({
 					terminal_colors = true, -- add neovim terminal colors
 					undercurl = true,
@@ -354,7 +377,7 @@ if cfg.plugins then
 				view_options = {
 					show_hidden = true
 				}
-			}, -- Optional dependencies
+			},                                       -- Optional dependencies
 			-- dependencies = { { "echasnovski/mini.icons", opts = {} } },
 			dependencies = { "nvim-tree/nvim-web-devicons" }, -- use if you prefer nvim-web-devicons
 			-- Lazy loading is not recommended because it is very tricky to make it work correctly in all situations.
@@ -402,7 +425,7 @@ if cfg.plugins then
 				-- C-k: Toggle signature help (if signature.enabled = true)
 				--
 				-- See :h blink-cmp-config-keymap for defining your own keymap
-				keymap = { preset = cfg.keybinds.use_enter_for_completion and "enter" or "default" },
+				keymap = { preset = "default" },
 
 				appearance = {
 					-- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
@@ -416,7 +439,7 @@ if cfg.plugins then
 						border = "none",
 					},
 					documentation = {
-						window = {border = "solid",},
+						window = { border = "solid", },
 						auto_show = true
 					},
 				},
@@ -468,6 +491,17 @@ end
 
 if cfg.lsp then
 	vim.lsp.enable(cfg.lsp.active_servers)
+	vim.lsp.config('pyright', {
+		capabilities = {
+			textDocument = {
+				completion = {
+					  completionItem = {
+						documentationFormat = { "markdown", "plaintext", "reStructuredText" },
+					}
+				}
+			},
+		},
+	})
 	-- disable grayed out functions when unused
 	if cfg.lsp.diagnostics then
 		vim.diagnostic.config {
@@ -476,9 +510,9 @@ if cfg.lsp then
 			severity_sort = { reverse = false },
 		}
 
-		-- Re-render diagnostics when the window is resized
+		-- re-render diagnostics when the window is resized
 
-		vim.api.nvim_create_autocmd('VimResized', {
+		vim.api.nvim_create_autocmd('vimresized', {
 			callback = function()
 				vim.diagnostic.hide()
 				vim.diagnostic.show()
@@ -546,7 +580,7 @@ if cfg.custom_status_bar then
 	end
 
 	local function lsp_info()
-		local client = vim.lsp.get_clients({bufnr = vim.api.nvim_get_current_buf()})[1]
+		local client = vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf() })[1]
 		if client ~= nil then
 			return " "
 				.. client.name
