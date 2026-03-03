@@ -1,3 +1,7 @@
 [user]
-	name = Slsv15
+	name = Viacheslav Andrushenko
 	email = 133392473+Slsv1@users.noreply.github.com
+[core]
+	editor = nvim
+[init]
+	defaultBranch = main

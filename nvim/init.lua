@@ -35,9 +35,16 @@ local cfg = {
 			"cssls",
 			"html",
 			"rstcheck",
+			"clangd",
 		},
 		gray_out_unnecesary = false,
 		diagnostics = true,
+	},
+	spell_check_in_files_pattern = {
+		markdown = true,
+		text = true,
+		gitcommit = true,
+		rst = true
 	},
 	tab_config = {
 		per_language_config = {
@@ -55,6 +62,7 @@ local cfg = {
 	custom_status_bar = true,
 	use_system_clipboard = true,
 	fancy_whitespace = true,
+	markdown_different_colors_for_headings = true,
 	keybinds = {
 		center_when_jumping = true,
 		leader = " ",
@@ -63,6 +71,12 @@ local cfg = {
 		lsp_go_definition = "gd",
 		select_pasted = "gp",
 		open_file_explorer = "-",
+
+		spell_check_english = "<leader>se",
+		spell_check_disable = "<leader>sd",
+		spell_check_accept_first_suggestion = "<leader>sy",
+		-- there are also keybind for accessign 2nd, 3rd... suggestions
+		-- that are defined as <leader>s#
 
 		next_buffer = "<leader>t",
 		prev_buffer = "<leader>T",
@@ -172,10 +186,10 @@ if cfg.keybinds then
 	local options = { noremap = true }
 
 	vim.keymap.set("n", cfg.keybinds.color_column, function()
-		if vim.o.colorcolumn == "80" then
-			vim.o.colorcolumn = "0"
+		if vim.wo.colorcolumn == "80" then
+			vim.wo.colorcolumn = "0"
 		else
-			vim.o.colorcolumn = "80"
+			vim.wo.colorcolumn = "80"
 		end
 	end)
 	if cfg.keybinds.center_when_jumping then
@@ -218,6 +232,27 @@ if cfg.keybinds then
 		vim.o.wrap = not vim.o.wrap
 	end)
 	vim.keymap.set({ "n", "v" }, cfg.keybinds.select_pasted, "`[v`]")
+
+	vim.keymap.set({"n", "v" }, cfg.keybinds.spell_check_english, function()
+
+		vim.api.nvim_echo({
+			{"SPELLING: ", "Comment"},
+			{"z=", "String"},
+			{" suggestions ", "Comment"},
+			{cfg.keybinds.spell_check_disable, "String"},
+			{" dissable spell check ", "Comment"},
+			{cfg.keybinds.spell_check_accept_first_suggestion, "String"},
+			{" first suggestion ", "Comment"},
+			{"z[u?]G", "String"},
+			{" add to internall good list [or undo]", "Comment"},
+		}, false, {})
+		vim.opt_local.spell = true
+	end)
+	vim.keymap.set({"n", "v" }, cfg.keybinds.spell_check_disable, function()
+		vim.opt_local.spell = false
+	end)
+
+	vim.keymap.set({"n", "v" }, cfg.keybinds.spell_check_accept_first_suggestion, "1z=")
 end
 
 
@@ -237,7 +272,7 @@ end
 -- vim.api.nvim_get_hl(0, "#Normal#")
 if cfg.misc then
 	vim.o.winborder = "solid"
-	vim.o.ignorecase = true
+	-- vim.o.ignorecase = true
 	vim.o.smartcase = true
 
 	vim.o.termguicolors = true -- idk if i need this one but just in case
@@ -258,6 +293,19 @@ end
 if cfg.max_scroll_off ~= nil then
 	vim.o.scrolloff = cfg.max_scroll_off
 end
+
+if cfg.spell_check_in_files_pattern then
+	vim.api.nvim_create_autocmd({ "FileType", "BufFilePost" }, {
+	  callback = function()
+		if cfg.spell_check_in_files_pattern[vim.bo.filetype] then
+		  vim.opt_local.spell = true
+		else
+		  vim.opt_local.spell = false
+		end
+	  end,
+	})
+end
+
 
 if cfg.tab_config then
 	-- default tab settings
@@ -308,6 +356,7 @@ if cfg.plugins then
 	vim.opt.rtp:prepend(lazypath)
 
 
+
 	-- require('lazydev').find_workspace(buf?)
 	-- Setup lazy.nvim plugins
 
@@ -338,6 +387,18 @@ if cfg.plugins then
 			--    - Incremental selection: Included, see `:help nvim-treesitter-incremental-selection-mod`
 			--    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
 			--    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
+		},
+		{
+		  'maxmx03/solarized.nvim',
+		  lazy = false,
+		  priority = 1000,
+		  opts = {},
+		  config = function(_, opts)
+			vim.o.termguicolors = true
+			vim.o.background = 'dark'
+			opts.variant = "winter"
+			require('solarized').setup(opts)
+		  end,
 		},
 		{
 			"ellisonleao/gruvbox.nvim",
@@ -481,11 +542,8 @@ if cfg.plugins then
 		spec = plugins,
 		install = { colorscheme = { "gruvbox" } },
 		-- automatically check for plugin updates
-		checker = { enabled = true },
+		checker = { enabled = true, notify = false},
 	})
-	if cfg.plugins.colorscheme then
-		vim.cmd("colorscheme " .. cfg.plugins.colorscheme)
-	end
 end
 
 
@@ -532,11 +590,36 @@ end
 ----------
 
 
-
+if cfg.plugins.colorscheme then
+	vim.cmd("colorscheme " .. cfg.plugins.colorscheme)
+end
 
 local function get_color(group, attr)
 	return vim.fn.synIDattr(vim.fn.synIDtrans(vim.fn.hlID(group)), attr)
 end
+
+if cfg.markdown_different_colors_for_headings then
+	-- for some reasong, for H1, vim.api.nvim_set_hl is not doing it because
+	-- my highlight group gets overriden!
+	local fg = get_color("Title", "fg#")
+	vim.cmd("highlight @markup.heading.1.markdown guifg=".. fg .. " gui=bold,underline")
+	-- vim.api.nvim_set_hl(0, "@markup.heading.1.markdown", hl)
+	fg = get_color("DiagnosticSignHint", "fg#")
+	vim.cmd("highlight @markup.heading.2.markdown guifg=".. fg .. " gui=bold,underline")
+
+	fg = get_color("DiagnosticSignError", "fg#")
+	vim.cmd("highlight @markup.heading.3.markdown guifg=".. fg .. " gui=bold,underline")
+
+	fg = get_color("DiagnosticSignWarn", "fg#")
+	vim.cmd("highlight @markup.heading.4.markdown guifg=".. fg .. " gui=bold,underline")
+
+	fg = get_color("DiagnosticSignInfo", "fg#")
+	vim.cmd("highlight @markup.heading.5.markdown guifg=".. fg .. " gui=bold,underline")
+
+	fg = get_color("Special", "fg#")
+	vim.cmd("highlight @markup.heading.6.markdown guifg=".. fg .. " gui=bold,underline")
+end
+
 
 
 if cfg.custom_status_bar then
@@ -564,14 +647,31 @@ if cfg.custom_status_bar then
 	}
 	local function mode()
 		local current_mode = vim.api.nvim_get_mode().mode
-		return string.format("%s", modes[current_mode]):upper()
+		if modes[current_mode] then
+			local mode = modes[current_mode]
+			return string.format("%s", mode):upper()
+		else
+			local mode = current_mode
+			return string.format("%s", mode):upper()
+		end
+
 	end
 
 	local function tabs_or_spaces()
 		if vim.o.expandtab then
-			return "Spaces"
+			return " Spaces"
 		else
-			return "Tabs"
+			return " Tabs"
+		end
+	end
+
+	local function spellcheck_info()
+		-- window options
+		if vim.wo.spell == true then
+			return " ✓ABC"
+		else
+			return ""
+			-- return " " .. "%#Comment#" .. "✗ABC" .. "%#StatusLine#"
 		end
 	end
 
@@ -590,7 +690,7 @@ if cfg.custom_status_bar then
 				.. "%#DiagnosticSignHint#" .. diagnostic_amount("Hint") .. "H"
 				.. "%#StatusLine#"
 		else
-			return " no lsp"
+			return " " .. "%#Comment#" .. "no lsp" .. "%#StatusLine#"
 		end
 
 		-- local status = vim.lsp.status()
@@ -612,7 +712,7 @@ if cfg.custom_status_bar then
 	vim.o.laststatus = 2
 	vim.o.showmode = false
 	-- vim.cmd("set fillchars=stl:-")
-	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter", "LspAttach", "CursorHold" }, {
+	vim.api.nvim_create_autocmd({ "ModeChanged", "BufEnter", "WinEnter", "LspAttach", "CursorHold", "LspAttach", "BufFilePost" }, {
 		callback = function()
 			vim.opt_local.statusline = ""
 				.. " "
@@ -620,6 +720,7 @@ if cfg.custom_status_bar then
 				.. " %F" -- show file type
 				.. " %m%r" -- flags
 				.. "%=" -- move over to other edge of status line
+				.. spellcheck_info()
 				.. lsp_info()
 				.. " "
 				.. "[%l/%L]"
@@ -665,3 +766,5 @@ if cfg.cursor_line then
 	make_default_bg("CursorLineNr")
 	make_default_bg("CursorLine")
 end
+
+

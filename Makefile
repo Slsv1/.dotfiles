@@ -8,5 +8,6 @@ dev_symlinks:
 	ln -sfv $(HOME)/.dotfiles/.tmux.conf $(HOME)/.tmux.conf
 	ln -sfv $(HOME)/.dotfiles/.gitconfig $(HOME)/.gitconfig
 	ln -sfv $(HOME)/.dotfiles/.bashrc $(HOME)/.bashrc
+	ln -sfv $(HOME)/.dotfiles/.gdbinit $(HOME)/.gdbinit
 .PHONY = dev_symlinks
 
